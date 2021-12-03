@@ -11,11 +11,9 @@ if __name__ == "__main__":
 
     ssd = SSD(config['SSD'])
 
-    # for tick in range(max_tick):
-    #     op, lba = wl.getNextOperation()
+    for tick in range(max_tick):
+        op, lba = wl.getNextOperation()
+        ssd.execute(op, lba, tick)
 
-
-
-    
-
-    
+    for blk in ssd.flash:
+        print(blk)
