@@ -19,6 +19,8 @@ class WorkLoad:
     def __getRandomLBA(self):
         return randint(0, self.lba_size)
 
+    # TODO : should read only writed lba
+
     def __getHotColdLBA(self):
         hot_idx = int(self.lba_size * self.locality)
         if random() > self.locality:

@@ -1,6 +1,6 @@
 import configparser
 from workload.workload_generator import WorkLoad
-from ssd.ssd import SSD
+from ssd.ftl import FTL
 
 if __name__ == "__main__":
     config = configparser.ConfigParser()
@@ -9,7 +9,7 @@ if __name__ == "__main__":
     wl = WorkLoad(config['Workload'])
     max_tick = int(config['Simulator']['simulation_time'])
 
-    ssd = SSD(config['SSD'])
+    ssd = FTL(config['SSD'])
 
     for tick in range(max_tick):
         op, lba = wl.getNextOperation()
