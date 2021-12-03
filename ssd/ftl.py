@@ -8,12 +8,12 @@ class FTL:
 
         # SSD data structure
         self.mapping_table = [-1 for _ in range(self.page_num)]
-        self.ftl = FTL(config)
         self.flash = [Block(self.page_per_block) for _ in range(self.block_num)]
 
         # gc threshold in page number scale
         self.gc_start_threshold = int(float(config['gc_start_threshold']) * self.page_num)
         self.gc_end_threshold = int(float(config['gc_end_threshold']) * self.page_num)
+        self.victim_selection_policy = int(config['victim_selection_policy'])
 
         # For convinience
         self.free_block_num = self.block_num
@@ -31,10 +31,21 @@ class FTL:
         self.WAF = 0
     
     def getNextPPN(self):
-        
+        pass
 
     def garbageCollection(self):
         pass
+        # 1. calculate weights for active blocks
+
+        # 2. sort
+        candidate_blk = sorted(self.active_block_idx, )
+
+        # 3. select a victim block
+        # 4. if u of victim block is 1, return and warn
+        # 5. copy valid pages
+        # 6. erase block
+        # 7. update free block idx
+        # 8. (for ours) clear weight to 0
 
     def execute(self, op, lba, ts):
         if op == 'read':
