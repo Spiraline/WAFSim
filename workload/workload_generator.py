@@ -9,7 +9,7 @@ class WorkLoad:
         self.__last_lba = -1
 
     def __getSeqLBA(self):
-        if self.__last_lba == self.lba_size:
+        if self.__last_lba == self.lba_size - 1:
             self.__last_lba = 0
         else:
             self.__last_lba += 1

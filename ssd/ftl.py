@@ -6,20 +6,24 @@ class FTL:
         self.page_per_block = int(config['page_per_block'])
         self.page_num = self.block_num * self.page_per_block
 
-        # SSD data structure
+        ### SSD data structure
         self.mapping_table = [-1 for _ in range(self.page_num)]
         self.flash = [Block(self.page_per_block) for _ in range(self.block_num)]
+
+        ### SSD parameter
+        self.victim_selection_policy = int(config['victim_selection_policy'])
 
         # gc threshold in page number scale
         self.gc_start_threshold = int(float(config['gc_start_threshold']) * self.page_num)
         self.gc_end_threshold = int(float(config['gc_end_threshold']) * self.page_num)
-        self.victim_selection_policy = int(config['victim_selection_policy'])
-
-        # For convinience
+        
+        ### For convinience
         self.free_block_num = self.block_num
-        self.free_block_idx = [i for i in range(int(self.block_num * float(config['overprovisioning_ratio'])))]
-        self.current_block = 0
-        self.active_block_idx = []
+
+        # 0 is selected for current_block
+        self.free_pbn = [i for i in range(1, int(self.block_num * (1 - float(config['op_ratio']))))]
+        self.current_pbn = 0
+        self.active_pbn = []
         self.next_ppn = 0
 
         # For debugging
@@ -30,8 +34,20 @@ class FTL:
         self.actual_write_pages = 0
         self.WAF = 0
     
-    def getNextPPN(self):
-        pass
+    def updatePPN(self):
+        self.next_ppn += 1
+        # if block is full
+        if self.next_ppn % self.page_per_block == 0:
+            self.active_pbn.append(self.current_pbn)
+
+            # No free block left. Very Dangerous
+            if len(self.free_pbn) == 0:
+                self.current_pbn = -1
+                self.next_ppn = 0
+            else:
+                self.current_pbn = self.free_pbn[0]
+                del self.free_pbn[0]
+                self.next_ppn = self.current_pbn * self.page_per_block
 
     def garbageCollection(self):
         pass
@@ -48,12 +64,17 @@ class FTL:
         # 8. (for ours) clear weight to 0
 
     def execute(self, op, lba, ts):
+        print(op, lba, ts)
         if op == 'read':
             ppn = self.mapping_table[lba]
             pbn = ppn // self.page_per_block
             offset = ppn % self.page_per_block
             self.flash[pbn].read(offset, lba, ts)
         elif op == 'write':
+            if self.current_pbn == -1:
+                print("[System] No free page left!")
+                exit(1)
+
             self.requested_write_pages += 1
             self.actual_write_pages += 1
             ppn = self.mapping_table[lba]
@@ -65,7 +86,7 @@ class FTL:
                 new_off = self.next_ppn % self.page_per_block
                 print("unmapped", lba, ppn, self.next_ppn, ts)
                 self.flash[new_pbn].write(new_off, lba, ts)
-                self.next_ppn += 1
+                self.updatePPN()
                 # TODO : get next block if block is full
             else:
                 prev_pbn = ppn // self.page_per_block
@@ -80,7 +101,7 @@ class FTL:
                 new_off = self.next_ppn % self.page_per_block
                 self.flash[new_pbn].write(new_off, lba, ts)
                 print("mapped", lba, ppn, self.next_ppn, ts)
-                self.next_ppn += 1
+                self.updatePPN()
         # Invalid op
         else:
             return -1
