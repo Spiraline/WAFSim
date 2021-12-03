@@ -26,11 +26,9 @@ class FTL:
 
         ### For debugging
         self.gc_cnt = 0
-        self.copied_valid_page = 0
-        self.utilization_for_victim_block = []
+        self.victim_utilization = []
         self.requested_write_pages = 0
         self.actual_write_pages = 0
-        self.WAF = 0
     
     def updatePPN(self):
         self.next_ppn += 1
@@ -47,7 +45,8 @@ class FTL:
                 del self.free_pbn[0]
                 self.next_ppn = self.current_pbn * self.page_per_block
 
-    def garbageCollection(self):
+    def garbageCollection(self, ts):
+        self.gc_cnt += 1
         ### 1. sort active blocks by metric
         # Greedy
         if self.victim_selection_policy == 0:
@@ -56,7 +55,7 @@ class FTL:
         # Cost-benefit
         elif self.victim_selection_policy == 1:
             candidate_blk = sorted(self.active_pbn,
-                            key = lambda pbn : -self.flash[pbn].getCostBenefit())
+                            key = lambda pbn : -self.flash[pbn].getCostBenefit(ts))
         # Ours
         else:
             candidate_blk = sorted(self.active_pbn,
@@ -80,6 +79,8 @@ class FTL:
                 print('[WARN] All active blocks have utilizaion 1! Stop GC')
                 break
 
+            self.victim_utilization.append(victim.getUtilization())
+
             ### 3. copy valid pages
             for offset in range(self.page_per_block):
                 accessTime = victim.accessTime
@@ -89,6 +90,7 @@ class FTL:
                     new_pbn = self.next_ppn // self.page_per_block
                     new_off = self.next_ppn % self.page_per_block
                     self.flash[new_pbn].write(new_off, lba, accessTime)
+                    self.actual_write_pages += 1
 
             ### 4. erase block
             victim.erase()
@@ -101,6 +103,8 @@ class FTL:
             if self.victim_selection_policy == 2:
                 for blk_idx in self.active_pbn:
                     self.flash[blk_idx].setWeight(0)
+
+        # print('GC end.. and now free block number is %d' % (len(self.free_pbn)))
 
     def execute(self, op, lba, ts):
         # print(op, lba, ts)
@@ -142,5 +146,5 @@ class FTL:
 
         ### Activate GC when needed
         if len(self.free_pbn) < self.gc_start_threshold:
-            print('[Log] GC start (Free block # : %d, threshold : %d)' % (len(self.free_pbn), self.gc_start_threshold))
-            self.garbageCollection()
+            # print('[Log] GC start (Free block # : %d, threshold : %d)' % (len(self.free_pbn), self.gc_start_threshold))
+            self.garbageCollection(ts)

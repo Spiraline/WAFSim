@@ -33,6 +33,10 @@ class Block:
         u = self.valid_bit.count(True) / self.page_per_block
         age = ts - self.accessTime
 
+        # Set to very small value if u == 0
+        if u == 0:
+            u = 0.01 / self.page_per_block
+
         return (1 - u) / (2 * u) * age
 
     def getOurMetric(self):
@@ -48,6 +52,8 @@ class Block:
         # Actually we don't need to clear lba
         self.lba[offset] = -1
 
+        # TODO : disable if accessTime is not invalid time
+        self.accessTime = ts
         self.valid_bit[offset] = False
         self.weight += addWeight
 
