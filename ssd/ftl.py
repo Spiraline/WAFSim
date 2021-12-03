@@ -13,6 +13,10 @@ class FTL:
         ### SSD parameter
         self.victim_selection_policy = int(config['victim_selection_policy'])
 
+        # TODO : rename
+        self.A = int(config['A'])
+        self.B = int(config['B'])
+
         # gc threshold in page number scale
         self.gc_start_threshold = int(float(config['gc_start_threshold']) * self.block_num)
         self.gc_end_threshold = int(float(config['gc_end_threshold']) * self.block_num)
@@ -27,10 +31,10 @@ class FTL:
         ### For debugging
         self.gc_cnt = 0
 
-        # for histogram (0.001 scale)
-        # self.victim_utilization = [0 for _ in range(1000)]
+        # for histogram w/o memory overflow (0.001 scale)
+        self.victim_utilization = [0 for _ in range(1000)]
 
-        self.victim_utilization = []
+        # self.victim_utilization = []
         self.requested_write_pages = 0
         self.actual_write_pages = 0
     
@@ -63,7 +67,7 @@ class FTL:
         # Ours
         else:
             candidate_blk = sorted(self.__active_pbn,
-                            key = lambda pbn : -self.flash[pbn].getOurMetric())
+                            key = lambda pbn : self.flash[pbn].getOurMetric(self.A))
         
         # for blk in candidate_blk:
         #     print(self.flash[blk].getLiveBlockNum() , end=' ')
@@ -84,9 +88,9 @@ class FTL:
                 break
 
             # TODO : tune resolution
-            # u = int(victim.getUtilization() * 1000)
-            # self.victim_utilization[u] += 1
-            self.victim_utilization.append(victim.getUtilization())
+            u = int(victim.getUtilization() * 1000)
+            self.victim_utilization[u] += 1
+            # self.victim_utilization.append(victim.getUtilization())
 
             ### 3. copy valid pages
             for offset in range(self.page_per_block):
@@ -137,8 +141,10 @@ class FTL:
             if ppn != -1:
                 prev_pbn = ppn // self.page_per_block
                 prev_off = ppn % self.page_per_block
-                # TODO : add weight when our metric
-                self.flash[prev_pbn].invalidate(prev_off, ts, 0)
+                addWeight = 0
+                if self.victim_selection_policy == 2:
+                    addWeight = self.flash[prev_pbn].getLiveBlockNum() >> self.B
+                self.flash[prev_pbn].invalidate(prev_off, ts, addWeight)
 
             # 2. 
             self.mapping_table[lba] = self.__next_ppn

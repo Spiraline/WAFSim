@@ -39,8 +39,8 @@ class Block:
 
         return (1 - u) / (2 * u) * age
 
-    def getOurMetric(self):
-        pass
+    def getOurMetric(self, A):
+        return self.valid_bit.count(True) << A + self.weight
 
     def setWeight(self, value):
         self.weight = value
