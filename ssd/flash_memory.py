@@ -38,7 +38,7 @@ class Block:
     def getOurMetric(self):
         pass
 
-    def updateWeight(self, value):
+    def setWeight(self, value):
         self.weight = value
 
     def invalidate(self, offset, ts, addWeight = 0):
@@ -49,7 +49,6 @@ class Block:
         self.lba[offset] = -1
 
         self.valid_bit[offset] = False
-        self.accessTime = ts
         self.weight += addWeight
 
     def read(self, offset, ts):
@@ -67,7 +66,10 @@ class Block:
 
         self.lba[offset] = lba
         self.valid_bit[offset] = True
-        self.accessTime = ts
+
+        # if live page is copied while GC, don't update accessTime
+        if ts > self.accessTime:
+            self.accessTime = ts
 
         return 0
 

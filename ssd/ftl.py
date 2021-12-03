@@ -14,19 +14,17 @@ class FTL:
         self.victim_selection_policy = int(config['victim_selection_policy'])
 
         # gc threshold in page number scale
-        self.gc_start_threshold = int(float(config['gc_start_threshold']) * self.page_num)
-        self.gc_end_threshold = int(float(config['gc_end_threshold']) * self.page_num)
+        self.gc_start_threshold = int(float(config['gc_start_threshold']) * self.block_num)
+        self.gc_end_threshold = int(float(config['gc_end_threshold']) * self.block_num)
         
         ### For convinience
-        self.free_block_num = self.block_num
-
-        # 0 is selected for current_block
+        # 0 is selected for current pbn
         self.free_pbn = [i for i in range(1, int(self.block_num * (1 - float(config['op_ratio']))))]
         self.current_pbn = 0
         self.active_pbn = []
         self.next_ppn = 0
 
-        # For debugging
+        ### For debugging
         self.gc_cnt = 0
         self.copied_valid_page = 0
         self.utilization_for_victim_block = []
@@ -50,21 +48,66 @@ class FTL:
                 self.next_ppn = self.current_pbn * self.page_per_block
 
     def garbageCollection(self):
-        pass
-        # 1. calculate weights for active blocks
+        ### 1. sort active blocks by metric
+        # Greedy
+        if self.victim_selection_policy == 0:
+            candidate_blk = sorted(self.active_pbn,
+                            key = lambda pbn : self.flash[pbn].getLiveBlockNum())
+        # Cost-benefit
+        elif self.victim_selection_policy == 1:
+            candidate_blk = sorted(self.active_pbn,
+                            key = lambda pbn : -self.flash[pbn].getCostBenefit())
+        # Ours
+        else:
+            candidate_blk = sorted(self.active_pbn,
+                            key = lambda pbn : -self.flash[pbn].getOurMetric())
+        
+        # for blk in candidate_blk:
+        #     print(self.flash[blk].getLiveBlockNum() , end=' ')
+        # print()
 
-        # 2. sort
-        candidate_blk = sorted(self.active_block_idx, )
+        while len(self.free_pbn) < self.gc_end_threshold:
+            if len(candidate_blk) == 0:
+                print('[WARN] No blocks to GC! Stop GC')
+                break
 
-        # 3. select a victim block
-        # 4. if u of victim block is 1, return and warn
-        # 5. copy valid pages
-        # 6. erase block
-        # 7. update free block idx
-        # 8. (for ours) clear weight to 0
+            ### 2. select a victim block
+            victim_idx = candidate_blk[0]
+            victim = self.flash[victim_idx]
+            del candidate_blk[0]
+            # if u of victim block is 1, return and warn
+            if victim.getLiveBlockNum() == self.page_per_block:
+                print('[WARN] All active blocks have utilizaion 1! Stop GC')
+                break
+
+            ### 3. copy valid pages
+            for offset in range(self.page_per_block):
+                accessTime = victim.accessTime
+                if victim.valid_bit[offset]:
+                    lba = victim.lba[offset]
+                    self.mapping_table[lba] = self.next_ppn
+                    new_pbn = self.next_ppn // self.page_per_block
+                    new_off = self.next_ppn % self.page_per_block
+                    self.flash[new_pbn].write(new_off, lba, accessTime)
+
+            ### 4. erase block
+            victim.erase()
+
+            ### 5. update free block idx
+            self.active_pbn.remove(victim_idx)
+            self.free_pbn.append(victim_idx)
+
+            ### 6. (for ours) clear weight to 0
+            if self.victim_selection_policy == 2:
+                for blk_idx in self.active_pbn:
+                    self.flash[blk_idx].setWeight(0)
 
     def execute(self, op, lba, ts):
-        print(op, lba, ts)
+        # print(op, lba, ts)
+        if lba >= self.page_num:
+            print("[Error] Invlaid LBA %d (page # is %d)!" % (lba, self.page_num))
+            exit(1)
+
         if op == 'read':
             ppn = self.mapping_table[lba]
             pbn = ppn // self.page_per_block
@@ -72,37 +115,32 @@ class FTL:
             self.flash[pbn].read(offset, lba, ts)
         elif op == 'write':
             if self.current_pbn == -1:
-                print("[System] No free page left!")
+                print("[Error] No free page left!")
                 exit(1)
 
             self.requested_write_pages += 1
             self.actual_write_pages += 1
             ppn = self.mapping_table[lba]
 
-            # Unmapped yet
-            if ppn == -1:
-                self.mapping_table[lba] = self.next_ppn
-                new_pbn = self.next_ppn // self.page_per_block
-                new_off = self.next_ppn % self.page_per_block
-                print("unmapped", lba, ppn, self.next_ppn, ts)
-                self.flash[new_pbn].write(new_off, lba, ts)
-                self.updatePPN()
-                # TODO : get next block if block is full
-            else:
+            # 1. Invalidate if already mapped
+            if ppn != -1:
                 prev_pbn = ppn // self.page_per_block
                 prev_off = ppn % self.page_per_block
                 # TODO : add weight when our metric
                 self.flash[prev_pbn].invalidate(prev_off, ts, 0)
 
-                # TODO : GC if needed
-
-                self.mapping_table[lba] = self.next_ppn
-                new_pbn = self.next_ppn // self.page_per_block
-                new_off = self.next_ppn % self.page_per_block
-                self.flash[new_pbn].write(new_off, lba, ts)
-                print("mapped", lba, ppn, self.next_ppn, ts)
-                self.updatePPN()
+            # 2. 
+            self.mapping_table[lba] = self.next_ppn
+            new_pbn = self.next_ppn // self.page_per_block
+            new_off = self.next_ppn % self.page_per_block
+            self.flash[new_pbn].write(new_off, lba, ts)
+            # print("mapped", lba, ppn, self.next_ppn, ts)
+            self.updatePPN()
         # Invalid op
         else:
             return -1
-        
+
+        ### Activate GC when needed
+        if len(self.free_pbn) < self.gc_start_threshold:
+            print('[Log] GC start (Free block # : %d, threshold : %d)' % (len(self.free_pbn), self.gc_start_threshold))
+            self.garbageCollection()
