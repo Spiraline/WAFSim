@@ -8,7 +8,11 @@ if __name__ == "__main__":
     config.read('config/config')
 
     wl = WorkLoad(config['Workload'])
-    max_tick = int(config['Simulator']['simulation_time'])
+    sim_t_str = config['Simulator']['simulation_time']
+    if sim_t_str.find('e') != -1:
+        max_tick = int(sim_t_str.split('e')[0]) * pow(10, int(sim_t_str.split('e')[1]))
+    else:
+        max_tick = int(sim_t_str)
 
     ssd = FTL(config['SSD'])
 
