@@ -37,6 +37,13 @@ class FTL:
         # self.victim_utilization = []
         self.requested_write_pages = 0
         self.actual_write_pages = 0
+
+    def clearMetric(self):
+        self.gc_cnt = 0
+        self.victim_utilization = [0 for _ in range(1000)]
+        # self.victim_utilization = []
+        self.requested_write_pages = 0
+        self.actual_write_pages = 0
     
     def updatePPN(self):
         self.__next_ppn += 1
@@ -153,6 +160,12 @@ class FTL:
             self.flash[new_pbn].write(new_off, lba, ts)
             # print("mapped", lba, ppn, self.__next_ppn, ts)
             self.updatePPN()
+        elif op == 'erase':
+            ppn = self.mapping_table[lba]
+            pbn = ppn // self.page_per_block
+            off = ppn % self.page_per_block
+            self.flash[pbn].invalidate(off, ts, 0)
+            self.mapping_table[lba] = -1
         # Invalid op
         else:
             return -1

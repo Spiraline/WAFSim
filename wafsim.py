@@ -2,6 +2,7 @@ import configparser
 from workload.workload_generator import WorkLoad
 from ssd.ftl import FTL
 import matplotlib.pyplot as plt
+from random import randint
 
 if __name__ == "__main__":
     config = configparser.ConfigParser()
@@ -16,7 +17,22 @@ if __name__ == "__main__":
 
     ssd = FTL(config['SSD'])
 
-    for tick in range(max_tick):
+    fill_tick = 58000
+    invalid_tick = 10000
+
+    # TODO : implement random fill warm-up
+    if config['Simulator']['warmup_type'] != '':
+        if config['Simulator']['warmup_type'] == '0':
+            for tick in range(fill_tick):
+                ssd.execute('write', tick, tick)
+            
+            for tick in range(invalid_tick):
+                lba = randint(0, fill_tick)
+                ssd.execute('erase', lba, fill_tick+tick)
+
+    ssd.clearMetric()
+
+    for tick in range(fill_tick + invalid_tick, fill_tick + invalid_tick + max_tick):
         op, lba = wl.getNextOperation()
         ssd.execute(op, lba, tick)
 
