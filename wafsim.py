@@ -17,11 +17,14 @@ if __name__ == "__main__":
 
     ssd = FTL(config['SSD'])
 
-    fill_tick = 58000
-    invalid_tick = 10000
-
+    fill_tick = 0
+    invalid_tick = 0
+    
     # TODO : implement random fill warm-up
     if config['Simulator']['warmup_type'] != '':
+        lba_size = int(config['Workload']['lba_size'])
+        fill_tick = int(lba_size * float(config['Simulator']['fill_ratio']))
+        invalid_tick = int(lba_size * float(config['Simulator']['invalid_ratio']))
         if config['Simulator']['warmup_type'] == '0':
             for tick in range(fill_tick):
                 ssd.execute('write', tick, tick)
