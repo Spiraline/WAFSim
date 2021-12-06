@@ -32,8 +32,11 @@ if __name__ == "__main__":
             for tick in range(invalid_tick):
                 lba = randint(0, fill_tick)
                 ssd.execute('erase', lba, fill_tick+tick)
+        ssd.clearMetric()
 
-    ssd.clearMetric()
+        for blk in ssd.flash:
+            print(blk.getUtilization(), end=' ')
+        print()
 
     for tick in range(fill_tick + invalid_tick, fill_tick + invalid_tick + max_tick):
         op, lba = wl.getNextOperation()

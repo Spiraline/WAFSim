@@ -130,3 +130,6 @@ dmypy.json
 
 # Config
 config/config
+
+# Debug output
+gc.txt

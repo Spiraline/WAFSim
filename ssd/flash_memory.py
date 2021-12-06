@@ -74,6 +74,7 @@ class Block:
         self.valid_bit[offset] = True
 
         # if live page is copied while GC, don't update accessTime
+        # Maybe should disable?
         if ts > self.accessTime:
             self.accessTime = ts
 

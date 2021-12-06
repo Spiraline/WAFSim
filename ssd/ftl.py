@@ -30,6 +30,10 @@ class FTL:
 
         ### For debugging
         self.gc_cnt = 0
+        self.debug_gc = int(config['debug_gc_utilization'])
+        if self.debug_gc != 0:
+            with open('gc.txt', 'w') as _:
+                pass
 
         # for histogram w/o memory overflow (0.001 scale)
         self.victim_utilization = [0 for _ in range(1000)]
@@ -75,10 +79,19 @@ class FTL:
         else:
             candidate_blk = sorted(self.__active_pbn,
                             key = lambda pbn : self.flash[pbn].getOurMetric(self.A))
-        
-        # for blk in candidate_blk:
-        #     print(self.flash[blk].getLiveBlockNum() , end=' ')
-        # print()
+
+        # Debug GC
+        if self.debug_gc != 0:
+            with open('gc.txt', 'a') as f:
+                u_list = []
+                live_block_sum = 0
+                for pbn in candidate_blk:
+                    u = self.flash[pbn].getUtilization()
+                    u_list.append(u)
+                    live_block_sum += self.flash[pbn].getLiveBlockNum()
+                f.write(str(u_list))
+                f.write(str(live_block_sum))
+                f.write('\n')
 
         while len(self.__free_pbn) < self.gc_end_threshold:
             if len(candidate_blk) == 0:
@@ -109,6 +122,7 @@ class FTL:
                     new_off = self.__next_ppn % self.page_per_block
                     self.flash[new_pbn].write(new_off, lba, accessTime)
                     self.actual_write_pages += 1
+                    self.updatePPN()
 
             ### 4. erase block
             victim.erase()
@@ -164,6 +178,7 @@ class FTL:
             ppn = self.mapping_table[lba]
             pbn = ppn // self.page_per_block
             off = ppn % self.page_per_block
+            # TODO : should add weight if workload have erase op
             self.flash[pbn].invalidate(off, ts, 0)
             self.mapping_table[lba] = -1
         # Invalid op
