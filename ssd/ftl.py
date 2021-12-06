@@ -13,7 +13,6 @@ class FTL:
         ### SSD parameter
         self.victim_selection_policy = int(config['victim_selection_policy'])
 
-        # TODO : rename
         self.U = int(config['utilization_factor'])
         self.A = int(config['age_factor'])
 
@@ -126,7 +125,7 @@ class FTL:
                     self.mapping_table[lba] = self.__next_ppn
                     new_pbn = self.__next_ppn // self.page_per_block
                     new_off = self.__next_ppn % self.page_per_block
-                    self.flash[new_pbn].write(new_off, lba, accessTime)
+                    self.flash[new_pbn].write(new_off, lba, accessTime, victim.invalidTime)
                     self.actual_write_pages += 1
                     self.updatePPN()
                     valid_page_copy += 1
@@ -175,7 +174,7 @@ class FTL:
                 prev_off = ppn % self.page_per_block
                 addWeight = 0
                 if self.victim_selection_policy == 2:
-                    addWeight = self.flash[prev_pbn].getLiveBlockNum() >> self.A
+                    addWeight = (self.flash[prev_pbn].getLiveBlockNum() - 1) >> self.A
                 self.flash[prev_pbn].invalidate(prev_off, ts, addWeight)
 
             # 2. 
