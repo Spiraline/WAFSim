@@ -32,7 +32,12 @@ class FTL:
         self.gc_cnt = 0
         self.debug_gc = int(config['debug_gc_utilization'])
         if self.debug_gc != 0:
-            with open('gc.txt', 'w') as _:
+            with open('gc_' + str(self.victim_selection_policy) + '.csv', 'w') as _:
+                pass
+
+        self.debug_valid_page_copy = int(config['debug_valid_page_copy'])
+        if self.debug_valid_page_copy != 0:
+            with open('gc_' + str(self.victim_selection_policy) + '_page_copy.csv', 'w') as _:
                 pass
 
         # for histogram w/o memory overflow (0.001 scale)
@@ -65,6 +70,7 @@ class FTL:
                 self.__next_ppn = self.__current_pbn * self.page_per_block
 
     def garbageCollection(self, ts):
+        valid_page_copy = 0
         self.gc_cnt += 1
         ### 1. sort active blocks by metric
         # Greedy
@@ -82,7 +88,7 @@ class FTL:
 
         # Debug GC
         if self.debug_gc != 0:
-            with open('gc.txt', 'a') as f:
+            with open('gc_' + str(self.victim_selection_policy) + '.csv', 'a') as f:
                 u_list = []
                 live_block_sum = 0
                 for pbn in candidate_blk:
@@ -123,6 +129,7 @@ class FTL:
                     self.flash[new_pbn].write(new_off, lba, accessTime)
                     self.actual_write_pages += 1
                     self.updatePPN()
+                    valid_page_copy += 1
 
             ### 4. erase block
             victim.erase()
@@ -135,6 +142,10 @@ class FTL:
             if self.victim_selection_policy == 2:
                 for blk_idx in self.__active_pbn:
                     self.flash[blk_idx].setWeight(0)
+
+        with open('gc_' + str(self.victim_selection_policy) + '_page_copy.csv', 'a') as f:
+            f.write(str(valid_page_copy))
+            f.write('\n')
 
         # print('GC end.. and now free block number is %d' % (len(self.__free_pbn)))
 

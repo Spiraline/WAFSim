@@ -132,4 +132,4 @@ dmypy.json
 config/config
 
 # Debug output
-gc.txt
+*.csv
