@@ -11,7 +11,7 @@ class FTL:
         self.flash = [Block(self.page_per_block) for _ in range(self.block_num)]
 
         ### SSD parameter
-        self.victim_selection_policy = int(config['victim_selection_policy'])
+        self.victim_selection_policy = config['victim_selection_policy']
 
         self.U = int(config['utilization_factor'])
         self.A = int(config['age_factor'])
@@ -31,12 +31,12 @@ class FTL:
         self.gc_cnt = 0
         self.debug_gc = int(config['debug_gc_utilization'])
         if self.debug_gc != 0:
-            with open('gc_' + str(self.victim_selection_policy) + '.csv', 'w') as _:
+            with open('gc_' + self.victim_selection_policy + '.csv', 'w') as _:
                 pass
 
         self.debug_valid_page_copy = int(config['debug_valid_page_copy'])
         if self.debug_valid_page_copy != 0:
-            with open('gc_' + str(self.victim_selection_policy) + '_page_copy.csv', 'w') as _:
+            with open('gc_' + self.victim_selection_policy + '_page_copy.csv', 'w') as _:
                 pass
 
         # for histogram w/o memory overflow (0.001 scale)
@@ -72,22 +72,26 @@ class FTL:
         valid_page_copy = 0
         self.gc_cnt += 1
         ### 1. sort active blocks by metric
-        # Greedy
-        if self.victim_selection_policy == 0:
-            candidate_blk = sorted(self.__active_pbn,
-                            key = lambda pbn : self.flash[pbn].getLiveBlockNum())
         # Cost-benefit
-        elif self.victim_selection_policy == 1:
+        if self.victim_selection_policy == 'CB':
             candidate_blk = sorted(self.__active_pbn,
                             key = lambda pbn : -self.flash[pbn].getCostBenefit(ts))
+        # CAT (Cost-Age-Time)
+        elif self.victim_selection_policy == 'CAT':
+            candidate_blk = sorted(self.__active_pbn,
+                            key = lambda pbn : -self.flash[pbn].getCostAgeTime(ts))
         # LC-CB
-        else:
+        elif self.victim_selection_policy == 'LC-CB':
             candidate_blk = sorted(self.__active_pbn,
                             key = lambda pbn : self.flash[pbn].getLCCBMetric(self.U))
+        # Default : Greedy
+        else:
+            candidate_blk = sorted(self.__active_pbn,
+                            key = lambda pbn : self.flash[pbn].getLiveBlockNum())
 
         # Debug GC
         if self.debug_gc != 0:
-            with open('gc_' + str(self.victim_selection_policy) + '.csv', 'a') as f:
+            with open('gc_' + self.victim_selection_policy + '.csv', 'a') as f:
                 u_list = []
                 live_block_sum = 0
                 for pbn in candidate_blk:
@@ -138,11 +142,11 @@ class FTL:
             self.__free_pbn.append(victim_idx)
 
         ### (for LC-CB) clear weight to 0
-        if self.victim_selection_policy == 2:
+        if self.victim_selection_policy == 'LC-CB':
             for blk_idx in self.__active_pbn:
                 self.flash[blk_idx].setWeight(0)
 
-        with open('gc_' + str(self.victim_selection_policy) + '_page_copy.csv', 'a') as f:
+        with open('gc_' + self.victim_selection_policy + '_page_copy.csv', 'a') as f:
             f.write(str(valid_page_copy))
             f.write('\n')
 
@@ -173,7 +177,7 @@ class FTL:
                 prev_pbn = ppn // self.page_per_block
                 prev_off = ppn % self.page_per_block
                 addWeight = 0
-                if self.victim_selection_policy == 2:
+                if self.victim_selection_policy == 'LC-CB':
                     addWeight = (self.flash[prev_pbn].getLiveBlockNum() - 1) >> self.A
                 self.flash[prev_pbn].invalidate(prev_off, ts, addWeight)
 
