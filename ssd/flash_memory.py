@@ -8,13 +8,11 @@ class Block:
         self.valid_bit = [False for _ in range(page_per_block)]
         self.access_time = -1
         self.invalid_time = -1
+        # For wear-leveling (in CAT)
         self.erase_count = 0
 
         # age for LC-CB and expandability
         self.weight = 0
-
-        # TODO : For wear-leveling
-        self.usage = 0
 
     def __str__(self):
         return_str = "Block %d\n" % (self.id)
@@ -25,7 +23,7 @@ class Block:
 
         return return_str
 
-    def getLiveBlockNum(self):
+    def getLivePageNum(self):
         return self.valid_bit.count(True)
 
     def getUtilization(self):

@@ -3,12 +3,13 @@ from .flash_memory import Block
 class FTL:
     def __init__(self, config):
         self.block_num = int(config['block_num'])
+        self.block_num_contain_op = int(self.block_num / (1 - float(config['op_ratio'])))
         self.page_per_block = int(config['page_per_block'])
         self.page_num = self.block_num * self.page_per_block
 
         ### SSD data structure
         self.mapping_table = [-1 for _ in range(self.page_num)]
-        self.flash = [Block(self.page_per_block) for _ in range(self.block_num)]
+        self.flash = [Block(self.page_per_block) for _ in range(self.block_num_contain_op)]
 
         ### SSD parameter
         self.victim_selection_policy = config['victim_selection_policy']
@@ -22,22 +23,24 @@ class FTL:
         
         ### For convinience
         # 0 is selected for current pbn
-        self.__free_pbn = [i for i in range(1, int(self.block_num * (1 - float(config['op_ratio']))))]
+        self.__free_pbn = [i for i in range(1, self.block_num)]
         self.__current_pbn = 0
         self.__active_pbn = []
+        # For over-provisioning
+        self.__op_pbn = [i for i in range(self.block_num, self.block_num_contain_op)]
         self.__next_ppn = 0
 
         ### For debugging
         self.gc_cnt = 0
         self.debug_gc = int(config['debug_gc_utilization'])
         if self.debug_gc != 0:
-            with open('gc_' + self.victim_selection_policy + '.csv', 'w') as _:
+            with open('gc_' + self.victim_selection_policy + '_u.csv', 'w') as _:
                 pass
 
-        self.debug_valid_page_copy = int(config['debug_valid_page_copy'])
-        if self.debug_valid_page_copy != 0:
-            with open('gc_' + self.victim_selection_policy + '_page_copy.csv', 'w') as _:
-                pass
+        self.debug_gc_stat = int(config['debug_gc_stat'])
+        if self.debug_gc_stat != 0:
+            with open('gc_' + self.victim_selection_policy + '_stat.csv', 'w') as f:
+                f.write('valid_page_copy,waf,live_page_num')
 
         # for histogram w/o memory overflow (0.001 scale)
         self.victim_utilization = [0 for _ in range(1000)]
@@ -87,19 +90,16 @@ class FTL:
         # Default : Greedy
         else:
             candidate_blk = sorted(self.__active_pbn,
-                            key = lambda pbn : self.flash[pbn].getLiveBlockNum())
+                            key = lambda pbn : self.flash[pbn].getLivePageNum())
 
         # Debug GC
         if self.debug_gc != 0:
-            with open('gc_' + self.victim_selection_policy + '.csv', 'a') as f:
+            with open('gc_' + self.victim_selection_policy + '_u.csv', 'a') as f:
                 u_list = []
-                live_block_sum = 0
                 for pbn in candidate_blk:
                     u = self.flash[pbn].getUtilization()
                     u_list.append(u)
-                    live_block_sum += self.flash[pbn].getLiveBlockNum()
                 f.write(str(u_list))
-                f.write(str(live_block_sum))
                 f.write('\n')
 
         while len(self.__free_pbn) < self.gc_end_threshold:
@@ -112,7 +112,7 @@ class FTL:
             victim = self.flash[victim_idx]
             del candidate_blk[0]
             # if u of victim block is 1, return and warn
-            if victim.getLiveBlockNum() == self.page_per_block:
+            if victim.getLivePageNum() == self.page_per_block:
                 print('[WARN] All active blocks have utilizaion 1! Stop GC')
                 break
 
@@ -146,9 +146,14 @@ class FTL:
             for blk_idx in self.__active_pbn:
                 self.flash[blk_idx].setWeight(0)
 
-        with open('gc_' + self.victim_selection_policy + '_page_copy.csv', 'a') as f:
-            f.write(str(valid_page_copy))
-            f.write('\n')
+        if self.debug_gc_stat != 0:
+            with open('gc_' + self.victim_selection_policy + '_stat.csv', 'a') as f:
+                live_page_num = 0
+                for pbn in self.__active_pbn:
+                    live_page_num += self.flash[pbn].getLivePageNum()
+                waf = self.actual_write_pages / self.requested_write_pages
+                f.write('%d,%d,%s' % (valid_page_copy, waf, live_page_num))
+                f.write('\n')
 
         # print('GC end.. and now free block number is %d' % (len(self.__free_pbn)))
 
@@ -178,7 +183,7 @@ class FTL:
                 prev_off = ppn % self.page_per_block
                 addWeight = 0
                 if self.victim_selection_policy == 'LC-CB':
-                    addWeight = (self.flash[prev_pbn].getLiveBlockNum() - 1) >> self.A
+                    addWeight = (self.flash[prev_pbn].getLivePageNum() - 1) >> self.A
                 self.flash[prev_pbn].invalidate(prev_off, ts, addWeight)
 
             # 2. 
