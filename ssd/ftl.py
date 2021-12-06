@@ -14,8 +14,8 @@ class FTL:
         self.victim_selection_policy = int(config['victim_selection_policy'])
 
         # TODO : rename
-        self.A = int(config['A'])
-        self.B = int(config['B'])
+        self.U = int(config['utilization_factor'])
+        self.A = int(config['age_factor'])
 
         # gc threshold in page number scale
         self.gc_start_threshold = int(float(config['gc_start_threshold']) * self.block_num)
@@ -81,10 +81,10 @@ class FTL:
         elif self.victim_selection_policy == 1:
             candidate_blk = sorted(self.__active_pbn,
                             key = lambda pbn : -self.flash[pbn].getCostBenefit(ts))
-        # Ours
+        # LC-CB
         else:
             candidate_blk = sorted(self.__active_pbn,
-                            key = lambda pbn : self.flash[pbn].getOurMetric(self.A))
+                            key = lambda pbn : self.flash[pbn].getLCCBMetric(self.U))
 
         # Debug GC
         if self.debug_gc != 0:
@@ -138,10 +138,10 @@ class FTL:
             self.__active_pbn.remove(victim_idx)
             self.__free_pbn.append(victim_idx)
 
-            ### 6. (for ours) clear weight to 0
-            if self.victim_selection_policy == 2:
-                for blk_idx in self.__active_pbn:
-                    self.flash[blk_idx].setWeight(0)
+        ### (for LC-CB) clear weight to 0
+        if self.victim_selection_policy == 2:
+            for blk_idx in self.__active_pbn:
+                self.flash[blk_idx].setWeight(0)
 
         with open('gc_' + str(self.victim_selection_policy) + '_page_copy.csv', 'a') as f:
             f.write(str(valid_page_copy))
@@ -175,7 +175,7 @@ class FTL:
                 prev_off = ppn % self.page_per_block
                 addWeight = 0
                 if self.victim_selection_policy == 2:
-                    addWeight = self.flash[prev_pbn].getLiveBlockNum() >> self.B
+                    addWeight = self.flash[prev_pbn].getLiveBlockNum() >> self.A
                 self.flash[prev_pbn].invalidate(prev_off, ts, addWeight)
 
             # 2. 

@@ -8,7 +8,7 @@ class Block:
         self.valid_bit = [False for _ in range(page_per_block)]
         self.accessTime = -1
 
-        # weight for ours and expandability
+        # weight for LC-CB and expandability
         self.weight = 0
 
         # TODO : For wear-leveling
@@ -39,7 +39,7 @@ class Block:
 
         return (1 - u) / (2 * u) * age
 
-    def getOurMetric(self, A):
+    def getLCCBMetric(self, A):
         return self.valid_bit.count(True) << A + self.weight
 
     def setWeight(self, value):
