@@ -34,13 +34,14 @@ class FTL:
         ### For debugging
         self.gc_cnt = 0
         self.debug_gc = int(config['debug_gc_utilization'])
+        self.sim_tag = config['simulation_tag']
         if self.debug_gc != 0:
-            with open(self.victim_selection_policy + '_gc_u.csv', 'w') as _:
+            with open(self.victim_selection_policy + '_gc_u_' + self.sim_tag + '.csv', 'w') as _:
                 pass
 
         self.debug_gc_stat = int(config['debug_gc_stat'])
         if self.debug_gc_stat != 0:
-            with open(self.victim_selection_policy + '_gc_stat.csv', 'w') as f:
+            with open(self.victim_selection_policy + '_gc_stat_' + self.sim_tag + '.csv', 'w') as f:
                 f.write('valid_page_copy,waf,live_page_num\n')
 
         # for histogram w/o memory overflow (0.001 scale)
@@ -95,7 +96,7 @@ class FTL:
 
         # Debug GC
         if self.debug_gc != 0:
-            with open(self.victim_selection_policy + '_gc_u.csv', 'a') as f:
+            with open(self.victim_selection_policy + '_gc_u_' + self.sim_tag + '.csv', 'a') as f:
                 u_list = []
                 for pbn in candidate_blk:
                     u = self.flash[pbn].getUtilization()
@@ -147,7 +148,7 @@ class FTL:
                 self.flash[blk_idx].setWeight(0)
 
         if self.debug_gc_stat != 0:
-            with open(self.victim_selection_policy + '_gc_stat.csv', 'a') as f:
+            with open(self.victim_selection_policy + '_gc_stat_' + self.sim_tag + '.csv', 'a') as f:
                 live_page_num = 0
                 for pbn in self.__active_pbn:
                     live_page_num += self.flash[pbn].getLivePageNum()

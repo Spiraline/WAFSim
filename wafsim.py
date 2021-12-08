@@ -53,7 +53,7 @@ if __name__ == "__main__":
         config['SSD']['debug_gc_utilization'] = '0'
         config['SSD']['debug_gc_stat'] = '0'
 
-    with open(config['SSD']['victim_selection_policy'] + '_result.csv', 'w') as f:
+    with open(config['SSD']['victim_selection_policy'] + '_result_' + config['SSD']['simulation_tag'] + '.csv', 'w') as f:
         avg_gc_cnt = total_gc_cnt / iter_num
         avg_waf = total_waf / iter_num
         f.write('gc_cnt, waf\n')
