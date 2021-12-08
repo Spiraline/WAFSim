@@ -2,6 +2,7 @@ from .flash_memory import Block
 
 class FTL:
     def __init__(self, config):
+        Block.idx = 0
         self.block_num = int(config['block_num'])
         self.block_num_contain_op = int(self.block_num / (1 - float(config['op_ratio'])))
         self.page_per_block = int(config['page_per_block'])
@@ -151,7 +152,7 @@ class FTL:
                 for pbn in self.__active_pbn:
                     live_page_num += self.flash[pbn].getLivePageNum()
                 waf = self.actual_write_pages / self.requested_write_pages
-                f.write('%d,%d,%s' % (valid_page_copy, waf, live_page_num))
+                f.write('%d,%f,%s' % (valid_page_copy, waf, live_page_num))
                 f.write('\n')
 
         # print('GC end.. and now free block number is %d' % (len(self.__free_pbn)))

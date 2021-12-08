@@ -50,7 +50,7 @@ class Block:
             erase_count = 0.01
 
         # TODO : different in every paper
-        return (1 - u) / (2 * u) * age / self.erase_count
+        return (1 - u) / (2 * u) * age / erase_count
 
     def getLCCBMetric(self, A):
         return self.valid_bit.count(True) << A + self.weight

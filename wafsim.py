@@ -47,9 +47,7 @@ if __name__ == "__main__":
         waf = ssd.actual_write_pages / ssd.requested_write_pages
         total_gc_cnt += ssd.gc_cnt
         total_waf += waf
-        print("Iteration %d" % i)
-        print("GC cnt : ", ssd.gc_cnt)
-        print("WAF : ", waf)
+        print("[Iteration %d] GC : %d, WAF : %f" % (i, ssd.gc_cnt, waf))
 
         # debug only first iteration
         config['SSD']['debug_gc_utilization'] = '0'
