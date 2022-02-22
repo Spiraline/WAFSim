@@ -21,7 +21,8 @@ if __name__ == "__main__":
     config['SSD']['simulation_tag'] = config['Simulator']['simulation_tag']
 
     lba_num = config.getint('SSD', 'block_num') * config.getint('SSD', 'page_per_block')
-    ssd_capacity = config.getint('SSD', 'page_size') * lba_num
+    page_size = config.getint('SSD', 'page_size')
+    ssd_capacity = page_size * lba_num
 
     ### Initialize statistics
     total_gc_cnt = 0
@@ -42,6 +43,7 @@ if __name__ == "__main__":
         trace_file = open(config.get('Trace', 'file_path'), 'r')
 
         ### 1-1. Check SSD size is larger than trace's max address
+        req_num = int(trace_file.readline())
         trace_max_addr = int(trace_file.readline())
 
         if ssd_capacity < trace_max_addr:
@@ -50,15 +52,43 @@ if __name__ == "__main__":
             print('max addr in trace:\t%d (%s) bytes' % (trace_max_addr, encodePrefix(trace_max_addr)))
             exit(1)
 
+        tick = 0
+
         ### 1-2. Warm-up
+        # TODO
         if warmup_fill_tick != 0:
             pass
+        
+        ssd = FTL(config['SSD'])
+
+        trace_name = config.get('Trace', 'file_path').split('/')[-1].split('.')[0]
+
+        ### 1-3. Simulation
+        print("[Info] Simulation with trace %s starts" % trace_name)
+        max_req = req_num * config.getint('Trace', 'execute_percentage') // 100
+
+        for req in range(max_req):
+            if (req * 20) % max_req == 0:
+                print('[Info] Simulation %d %% Complete' % (req * 20 // max_req))
+            op, lba_list = parseReq(trace_file.readline(), page_size)
+            for lba in lba_list:
+                ssd.execute(op, lba, tick)
+                tick += 1
 
         trace_file.close()
 
+        if ssd.requested_write_pages == 0:
+            print("[Info] No write request")
+            exit(1)
+
+        waf = ssd.actual_write_pages / ssd.requested_write_pages
+        print('[Info] GC : %d, WAF : %f' % (ssd.gc_cnt, waf))
+        # result_file = open(config['SSD']['victim_selection_policy'] + '_result_' + config['Simulator']['simulation_tag'] + '.csv', 'w')
+        # result_file.write('%f, %f\n' % (ssd.gc_cnt, waf))
+
     ### 2. Start synthetic simulation
     elif config['Simulator']['simulation_type'] == 'Synthetic':
-        config['Synthetic']['lba_num'] = str(lba_num)
+        config['Synthetic']['lba_num'] = str(lba_num * config.getint('Synthetic', 'working_set_percentage') // 100)
         wl = WorkLoad(config['Synthetic'])
 
         max_tick = parseIntExp(config['Synthetic']['simulation_time'])

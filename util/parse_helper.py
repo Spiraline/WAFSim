@@ -32,3 +32,19 @@ def encodePrefix(num):
         prefix_idx += 1
     
     return str(coeff) + prefix_list[prefix_idx]
+
+def parseReq(req_str, page_size = parseIntPrefix('8K')):
+    ts, addr, size, opcode = map(int, req_str.split())
+
+    lba_list = []
+    base_lba = addr // page_size
+
+    for i in range(size // page_size + 1):
+        lba_list.append(base_lba + i)
+
+    if opcode == 0:
+        op = 'write'
+    else:
+        op = 'read'
+
+    return op, lba_list

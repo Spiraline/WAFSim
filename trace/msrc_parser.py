@@ -2,7 +2,8 @@ import os
 import argparse
 
 ### Output format
-# First row : largest address
+# 1st row : request #
+# 2nd row : max address
 # time, address, size, op
 # op : WRITE (0), READ (1)
 
@@ -48,6 +49,7 @@ if __name__ == "__main__":
             trace_list.append((time, address, size, op))
     
     with open(args.input.split('.')[0] + '.trace', 'w') as output_f:
+        output_f.write('%d\n' % len(trace_list))
         output_f.write('%d\n' % max_address)
         for (time, address, size, op) in trace_list:
             output_f.write('%d %s %s %s\n' % (time, address, size, op))
