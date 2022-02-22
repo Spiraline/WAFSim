@@ -67,9 +67,12 @@ if __name__ == "__main__":
         print("[Info] Simulation with trace %s starts" % trace_name)
         max_req = req_num * config.getint('Trace', 'execute_percentage') // 100
 
+        progress = 0
         for req in range(max_req):
-            if (req * 20) % max_req == 0:
-                print('[Info] Simulation %d %% Complete' % (req * 20 // max_req))
+            curr_progress = (int)(req / max_req * 20)
+            if progress != curr_progress:
+                progress = curr_progress
+                print('[Info] Simulation %d %% Complete' % (progress * 5))
             op, lba_list = parseReq(trace_file.readline(), page_size)
             for lba in lba_list:
                 ssd.execute(op, lba, tick)
