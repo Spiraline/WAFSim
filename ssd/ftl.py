@@ -16,7 +16,8 @@ class FTL:
         self.victim_selection_policy = config['victim_selection_policy']
 
         self.U = int(config['utilization_factor'])
-        self.A = int(config['age_factor'])
+        self.H = int(config['hotness_factor'])
+        self.D = int(config['decay_factor'])
 
         # gc threshold in page number scale
         self.gc_start_threshold = int(float(config['gc_start_threshold']) * self.block_num)
@@ -184,7 +185,7 @@ class FTL:
                 prev_off = ppn % self.page_per_block
                 addWeight = 0
                 if self.victim_selection_policy == 'LC-CB':
-                    addWeight = (self.flash[prev_pbn].getLivePageNum() - 1) >> self.A
+                    addWeight = (self.flash[prev_pbn].getLivePageNum() - 1) >> self.H
                 self.flash[prev_pbn].invalidate(prev_off, ts, addWeight)
 
             # 2. 

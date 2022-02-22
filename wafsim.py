@@ -85,6 +85,8 @@ if __name__ == "__main__":
             exit(1)
 
         waf = ssd.actual_write_pages / ssd.requested_write_pages
+        print('[Info] Simulation Complete')
+        print('[Info] Req # : %d' % max_req)
         print('[Info] GC : %d, WAF : %f' % (ssd.gc_cnt, waf))
         # result_file = open(config['SSD']['victim_selection_policy'] + '_result_' + config['Simulator']['simulation_tag'] + '.csv', 'w')
         # result_file.write('%f, %f\n' % (ssd.gc_cnt, waf))
