@@ -92,10 +92,10 @@ if __name__ == "__main__":
             invalid_progress = 0
             # Random invalid
             while tick < warmup_fill_tick + warmup_invalid_tick:
-                curr_invalid_progress = (int)((tick - warmup_fill_tick) / (warmup_fill_tick + warmup_invalid_tick) * 10)
+                curr_invalid_progress = (int)((tick - warmup_fill_tick) / warmup_invalid_tick * 10)
                 if invalid_progress != curr_invalid_progress:
                     invalid_progress = curr_invalid_progress
-                    print('[Info] Warm-up (invalid) %d %% Complete' % (invalid_progress * 10))
+                    print('[Info] Warm-up (invalidate) %d %% Complete' % (invalid_progress * 10))
                 lba = randint(0, lba_num-1)
 
                 # Invalid only for written lba
@@ -147,24 +147,67 @@ if __name__ == "__main__":
 
         ### Iterate for iter_num times
         for i in range(iter_num):
-            print("[Info] Iteration %d starts" % i)
+            print("[Info] Exp #%d starts" % i)
             ### 2-1. configure SSD
             ssd = FTL(config['SSD'])
+            tick = 0
             
-            # TODO : implement random fill warm-up
-            if config['Simulator']['warmup_type'] != '':
-                if config['Simulator']['warmup_type'] == '0':
-                    for tick in range(warmup_fill_tick):
+            ### 1-2. Warm-up
+            if warmup_type != '':
+                fill_progress = 0
+                print("[Info] Warm-up starts")
+                if warmup_type == '0':
+                    while tick < warmup_fill_tick:
+                        curr_fill_progress = (int)(tick / warmup_fill_tick * 10)
+                        if fill_progress != curr_fill_progress:
+                            fill_progress = curr_fill_progress
+                            print('[Info] Warm-up (fill) %d %% Complete' % (fill_progress * 10))
                         ssd.execute('write', tick, tick)
-                    
-                    for tick in range(warmup_invalid_tick):
-                        lba = randint(0, warmup_fill_tick)
-                        ssd.execute('erase', lba, warmup_fill_tick+tick)
+                        tick += 1
+                # Random fill
+                elif warmup_type == '1':
+                    while tick < warmup_fill_tick:
+                        curr_fill_progress = (int)(tick / warmup_fill_tick * 10)
+                        if fill_progress != curr_fill_progress:
+                            fill_progress = curr_fill_progress
+                            print('[Info] Warm-up (fill) %d %% Complete' % (fill_progress * 10))
+                        lba = randint(0, lba_num-1)
+
+                        # Fill only for unwritten lba
+                        if ssd.mapping_table[lba] == -1:
+                            ssd.execute('write', lba, tick)
+                            tick += 1
+                else:
+                    print('[Error] Invalid warm-up type')
+                    exit(1)
+                
+                invalid_progress = 0
+                # Random invalid
+                while tick < warmup_fill_tick + warmup_invalid_tick:
+                    curr_invalid_progress = (int)((tick - warmup_fill_tick) / warmup_invalid_tick * 10)
+                    if invalid_progress != curr_invalid_progress:
+                        invalid_progress = curr_invalid_progress
+                        print('[Info] Warm-up (invalidate) %d %% Complete' % (invalid_progress * 10))
+                    lba = randint(0, lba_num-1)
+
+                    # Invalid only for written lba
+                    if ssd.mapping_table[lba] != -1:
+                        ssd.execute('erase', lba, tick)
+                        tick += 1
+                
                 ssd.clearMetric()
 
-            for tick in range(warmup_fill_tick + warmup_invalid_tick, warmup_fill_tick + warmup_invalid_tick + max_tick):
+            # 2-3. Simulation
+            print("[Info] Simulation with synthetic workload starts")
+            sim_progress = 0
+            for req in range(max_tick):
+                curr_sim_progress = (int)(req / max_tick * 10)
+                if sim_progress != curr_sim_progress:
+                    sim_progress = curr_sim_progress
+                    print('[Info] Simulation %d %% Complete' % (sim_progress * 10))
                 op, lba = wl.getNextOperation()
                 ssd.execute(op, lba, tick)
+                tick += 1
 
             waf = ssd.actual_write_pages / ssd.requested_write_pages
             total_gc_cnt += ssd.gc_cnt
