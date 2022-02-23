@@ -34,16 +34,16 @@ class FTL:
 
         ### For debugging
         self.gc_cnt = 0
-        self.debug_gc = int(config['debug_gc_utilization'])
-        self.sim_tag = config['simulation_tag']
-        if self.debug_gc != 0:
-            with open(self.victim_selection_policy + '_gc_u_' + self.sim_tag + '.csv', 'w') as _:
-                pass
+        # self.debug_gc = int(config['debug_gc_utilization'])
+        # self.sim_tag = config['simulation_tag']
+        # if self.debug_gc != 0:
+        #     with open(self.victim_selection_policy + '_gc_u_' + self.sim_tag + '.csv', 'w') as _:
+        #         pass
 
-        self.debug_gc_stat = int(config['debug_gc_stat'])
-        if self.debug_gc_stat != 0:
-            with open(self.victim_selection_policy + '_gc_stat_' + self.sim_tag + '.csv', 'w') as f:
-                f.write('valid_page_copy,waf,live_page_num\n')
+        # self.debug_gc_stat = int(config['debug_gc_stat'])
+        # if self.debug_gc_stat != 0:
+        #     with open(self.victim_selection_policy + '_gc_stat_' + self.sim_tag + '.csv', 'w') as f:
+        #         f.write('valid_page_copy,waf,live_page_num\n')
 
         # for histogram w/o memory overflow (0.001 scale)
         self.victim_utilization = [0 for _ in range(1000)]
@@ -96,14 +96,14 @@ class FTL:
                             key = lambda pbn : self.flash[pbn].getLivePageNum())
 
         # Debug GC
-        if self.debug_gc != 0:
-            with open(self.victim_selection_policy + '_gc_u_' + self.sim_tag + '.csv', 'a') as f:
-                u_list = []
-                for pbn in candidate_blk:
-                    u = self.flash[pbn].getUtilization()
-                    u_list.append(u)
-                f.write(str(u_list))
-                f.write('\n')
+        # if self.debug_gc != 0:
+        #     with open(self.victim_selection_policy + '_gc_u_' + self.sim_tag + '.csv', 'a') as f:
+        #         u_list = []
+        #         for pbn in candidate_blk:
+        #             u = self.flash[pbn].getUtilization()
+        #             u_list.append(u)
+        #         f.write(str(u_list))
+        #         f.write('\n')
 
         while len(self.__free_pbn) < self.gc_end_threshold:
             if len(candidate_blk) == 0:
@@ -148,14 +148,14 @@ class FTL:
             for blk_idx in self.__active_pbn:
                 self.flash[blk_idx].setWeight(0)
 
-        if self.debug_gc_stat != 0:
-            with open(self.victim_selection_policy + '_gc_stat_' + self.sim_tag + '.csv', 'a') as f:
-                live_page_num = 0
-                for pbn in self.__active_pbn:
-                    live_page_num += self.flash[pbn].getLivePageNum()
-                waf = self.actual_write_pages / self.requested_write_pages
-                f.write('%d,%f,%s' % (valid_page_copy, waf, live_page_num))
-                f.write('\n')
+        # if self.debug_gc_stat != 0:
+        #     with open(self.victim_selection_policy + '_gc_stat_' + self.sim_tag + '.csv', 'a') as f:
+        #         live_page_num = 0
+        #         for pbn in self.__active_pbn:
+        #             live_page_num += self.flash[pbn].getLivePageNum()
+        #         waf = self.actual_write_pages / self.requested_write_pages
+        #         f.write('%d,%f,%s' % (valid_page_copy, waf, live_page_num))
+        #         f.write('\n')
 
         # print('GC end.. and now free block number is %d' % (len(self.__free_pbn)))
 

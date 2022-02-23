@@ -5,8 +5,10 @@ from ssd.ftl import FTL
 import matplotlib.pyplot as plt
 from random import randint, seed
 from os.path import exists
+from os import makedirs
 
 if __name__ == "__main__":
+    makedirs('res', exist_ok=True)
     if not exists('config/config'):
         print('[Error] No configuration file. Please make config/config file')
         exit(1)
@@ -14,7 +16,7 @@ if __name__ == "__main__":
     config = configparser.ConfigParser()
     config.read('config/config')
 
-    ### 0. Parse Configuration
+    ### Parse Configuration
     config['SSD']['block_num'] = str(parseIntPrefix(config['SSD']['block_num']))
     config['SSD']['page_per_block'] = str(parseIntPrefix(config['SSD']['page_per_block']))
     config['SSD']['page_size'] = str(parseIntPrefix(config['SSD']['page_size']))
@@ -132,8 +134,13 @@ if __name__ == "__main__":
         print('[Info] Simulation Complete')
         print('[Info] Req # : %d' % max_req)
         print('[Info] GC : %d, WAF : %f' % (ssd.gc_cnt, waf))
-        # result_file = open(config['SSD']['victim_selection_policy'] + '_result_' + config['Simulator']['simulation_tag'] + '.csv', 'w')
-        # result_file.write('%f, %f\n' % (ssd.gc_cnt, waf))
+
+        result_file = 'res/' + config['SSD']['victim_selection_policy'] + '_' + trace_name
+        if config['Simulator']['simulation_tag'] != '':
+            result_file += '_' + config['Simulator']['simulation_tag']
+        result_file += '_result.csv'
+        with open(result_file, 'w') as f:
+            f.write('%f, %f\n' % (ssd.gc_cnt, waf))
 
     ### 2. Start synthetic simulation
     elif config['Simulator']['simulation_type'] == 'Synthetic':

@@ -136,3 +136,4 @@ config/config
 
 # Debug output
 *.csv
+res
