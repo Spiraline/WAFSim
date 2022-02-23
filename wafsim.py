@@ -3,7 +3,7 @@ from util.workload_generator import WorkLoad
 from util.parse_helper import *
 from ssd.ftl import FTL
 import matplotlib.pyplot as plt
-from random import randint
+from random import randint, seed
 from os.path import exists
 
 if __name__ == "__main__":
@@ -24,15 +24,19 @@ if __name__ == "__main__":
     page_size = config.getint('SSD', 'page_size')
     ssd_capacity = page_size * lba_num
 
-    ### Initialize statistics
-    total_gc_cnt = 0
-    total_waf = 0
+    if config['Simulator']['seed'] != '':
+        seed(config.getint('Simulator', 'seed'))
 
     warmup_fill_tick = 0
     warmup_invalid_tick = 0
-    if config['Simulator']['warmup_type'] != '':
+    warmup_type = config['Simulator']['warmup_type']
+    if warmup_type != '':
         warmup_fill_tick = lba_num * config.getint('Simulator','fill_percentage') // 100
         warmup_invalid_tick = lba_num * config.getint('Simulator','invalid_percentage') // 100
+
+    ### Initialize statistics
+    total_gc_cnt = 0
+    total_waf = 0
 
     ### 1. Start trace simulation
     if config['Simulator']['simulation_type'] == 'Trace':
@@ -57,7 +61,6 @@ if __name__ == "__main__":
         tick = 0
 
         ### 1-2. Warm-up
-        warmup_type = config['Simulator']['warmup_type']
         if warmup_type != '':
             fill_progress = 0
             print("[Info] Warm-up starts")
