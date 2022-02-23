@@ -135,22 +135,26 @@ if __name__ == "__main__":
         print('[Info] Req # : %d' % max_req)
         print('[Info] GC : %d, WAF : %f' % (ssd.gc_cnt, waf))
 
-        result_file = 'res/' + config['SSD']['victim_selection_policy'] + '_' + trace_name
+        result_path = 'res/' + config['SSD']['victim_selection_policy'] + '_' + trace_name
         if config['Simulator']['simulation_tag'] != '':
-            result_file += '_' + config['Simulator']['simulation_tag']
-        result_file += '_result.csv'
-        with open(result_file, 'w') as f:
-            f.write('%f, %f\n' % (ssd.gc_cnt, waf))
+            result_path += '_' + config['Simulator']['simulation_tag']
+        result_path += '_result.csv'
+        with open(result_path, 'w') as result_file:
+            result_file.write('%d, %f\n' % (ssd.gc_cnt, waf))
 
     ### 2. Start synthetic simulation
     elif config['Simulator']['simulation_type'] == 'Synthetic':
+        result_path = 'res/' + config['SSD']['victim_selection_policy'] + '_synthetic'
+        if config['Simulator']['simulation_tag'] != '':
+            result_path += '_' + config['Simulator']['simulation_tag']
+        result_path += '_result.csv'
+        result_file = open(result_path, 'w')
+
         config['Synthetic']['lba_num'] = str(lba_num * config.getint('Synthetic', 'working_set_percentage') // 100)
         wl = WorkLoad(config['Synthetic'])
 
         max_tick = parseIntExp(config['Synthetic']['simulation_time'])
         iter_num = parseIntExp(config['Synthetic']['iter_num'])
-
-        result_file = open(config['SSD']['victim_selection_policy'] + '_result_' + config['Simulator']['simulation_tag'] + '.csv', 'w')
 
         ### Iterate for iter_num times
         for i in range(iter_num):
@@ -220,19 +224,14 @@ if __name__ == "__main__":
             total_gc_cnt += ssd.gc_cnt
             total_waf += waf
             print("[Info] Iteration %d ends | GC : %d, WAF : %f" % (i, ssd.gc_cnt, waf))
-            result_file.write('%f, %f\n' % (ssd.gc_cnt, waf))
+            result_file.write('%d, %f\n' % (ssd.gc_cnt, waf))
 
-            # debug only first iteration
-            config['SSD']['debug_gc_utilization'] = '0'
-            config['SSD']['debug_gc_stat'] = '0'
-        
+        avg_gc_cnt = total_gc_cnt / iter_num
+        avg_waf = total_waf / iter_num
+        result_file.write('------- Average ---------\n')
+        result_file.write('%f, %f\n' % (avg_gc_cnt, avg_waf))
+
         result_file.close()
-
-        with open(config['SSD']['victim_selection_policy'] + '_result_' + config['Simulator']['simulation_tag'] + '.csv', 'w') as f:
-            avg_gc_cnt = total_gc_cnt / iter_num
-            avg_waf = total_waf / iter_num
-            f.write('gc_cnt, waf\n')
-            f.write('%f, %f\n' % (avg_gc_cnt, avg_waf))
     else:
         print('[Error] Invalid simulation type. Check config file')
         exit(1)
