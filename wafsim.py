@@ -31,8 +31,8 @@ if __name__ == "__main__":
     warmup_fill_tick = 0
     warmup_invalid_tick = 0
     if config['Simulator']['warmup_type'] != '':
-        warmup_fill_tick = int(lba_num * config.getfloat('Simulator','fill_ratio'))
-        warmup_invalid_tick = int(lba_num * config.getfloat('Simulator','invalid_ratio'))
+        warmup_fill_tick = lba_num * config.getint('Simulator','fill_percentage') // 100
+        warmup_invalid_tick = lba_num * config.getint('Simulator','invalid_percentage') // 100
 
     ### 1. Start trace simulation
     if config['Simulator']['simulation_type'] == 'Trace':
@@ -52,14 +52,55 @@ if __name__ == "__main__":
             print('max addr in trace:\t%d (%s) bytes' % (trace_max_addr, encodePrefix(trace_max_addr)))
             exit(1)
 
+        ssd = FTL(config['SSD'])
+
         tick = 0
 
         ### 1-2. Warm-up
-        # TODO
-        if warmup_fill_tick != 0:
-            pass
-        
-        ssd = FTL(config['SSD'])
+        warmup_type = config['Simulator']['warmup_type']
+        if warmup_type != '':
+            fill_progress = 0
+            print("[Info] Warm-up starts")
+            if warmup_type == '0':
+                while tick < warmup_fill_tick:
+                    curr_fill_progress = (int)(tick / warmup_fill_tick * 10)
+                    if fill_progress != curr_fill_progress:
+                        fill_progress = curr_fill_progress
+                        print('[Info] Warm-up (fill) %d %% Complete' % (fill_progress * 10))
+                    ssd.execute('write', tick, tick)
+                    tick += 1
+            # Random fill
+            elif warmup_type == '1':
+                while tick < warmup_fill_tick:
+                    curr_fill_progress = (int)(tick / warmup_fill_tick * 10)
+                    if fill_progress != curr_fill_progress:
+                        fill_progress = curr_fill_progress
+                        print('[Info] Warm-up (fill) %d %% Complete' % (fill_progress * 10))
+                    lba = randint(0, lba_num-1)
+
+                    # Fill only for unwritten lba
+                    if ssd.mapping_table[lba] == -1:
+                        ssd.execute('write', lba, tick)
+                        tick += 1
+            else:
+                print('[Error] Invalid warm-up type')
+                exit(1)
+            
+            invalid_progress = 0
+            # Random invalid
+            while tick < warmup_fill_tick + warmup_invalid_tick:
+                curr_invalid_progress = (int)((tick - warmup_fill_tick) / (warmup_fill_tick + warmup_invalid_tick) * 10)
+                if invalid_progress != curr_invalid_progress:
+                    invalid_progress = curr_invalid_progress
+                    print('[Info] Warm-up (invalid) %d %% Complete' % (invalid_progress * 10))
+                lba = randint(0, lba_num-1)
+
+                # Invalid only for written lba
+                if ssd.mapping_table[lba] != -1:
+                    ssd.execute('erase', lba, tick)
+                    tick += 1
+            
+            ssd.clearMetric()
 
         trace_name = config.get('Trace', 'file_path').split('/')[-1].split('.')[0]
 
@@ -67,12 +108,12 @@ if __name__ == "__main__":
         print("[Info] Simulation with trace %s starts" % trace_name)
         max_req = req_num * config.getint('Trace', 'execute_percentage') // 100
 
-        progress = 0
+        sim_progress = 0
         for req in range(max_req):
-            curr_progress = (int)(req / max_req * 20)
-            if progress != curr_progress:
-                progress = curr_progress
-                print('[Info] Simulation %d %% Complete' % (progress * 5))
+            curr_sim_progress = (int)(req / max_req * 20)
+            if sim_progress != curr_sim_progress:
+                sim_progress = curr_sim_progress
+                print('[Info] Simulation %d %% Complete' % (sim_progress * 5))
             op, lba_list = parseReq(trace_file.readline(), page_size)
             for lba in lba_list:
                 ssd.execute(op, lba, tick)
