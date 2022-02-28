@@ -20,7 +20,9 @@ if __name__ == "__main__":
     config['SSD']['block_num'] = str(parseIntPrefix(config['SSD']['block_num']))
     config['SSD']['page_per_block'] = str(parseIntPrefix(config['SSD']['page_per_block']))
     config['SSD']['page_size'] = str(parseIntPrefix(config['SSD']['page_size']))
+    
     config['SSD']['simulation_tag'] = config['Simulator']['simulation_tag']
+    config['SSD']['debug_victim_hist'] = config['Simulator']['debug_victim_hist']
 
     lba_num = config.getint('SSD', 'block_num') * config.getint('SSD', 'page_per_block')
     page_size = config.getint('SSD', 'page_size')
@@ -154,10 +156,10 @@ if __name__ == "__main__":
         wl = WorkLoad(config['Synthetic'])
 
         max_tick = parseIntExp(config['Synthetic']['simulation_time'])
-        iter_num = parseIntExp(config['Synthetic']['iter_num'])
+        iteration_num = parseIntExp(config['Synthetic']['iteration_num'])
 
-        ### Iterate for iter_num times
-        for i in range(iter_num):
+        ### Iterate for iteration_num times
+        for i in range(iteration_num):
             print("[Info] Exp #%d starts" % i)
             ### 2-1. configure SSD
             ssd = FTL(config['SSD'])
@@ -226,8 +228,8 @@ if __name__ == "__main__":
             print("[Info] Iteration %d ends | GC : %d, WAF : %f" % (i, ssd.gc_cnt, waf))
             result_file.write('%d, %f\n' % (ssd.gc_cnt, waf))
 
-        avg_gc_cnt = total_gc_cnt / iter_num
-        avg_waf = total_waf / iter_num
+        avg_gc_cnt = total_gc_cnt / iteration_num
+        avg_waf = total_waf / iteration_num
         result_file.write('------- Average ---------\n')
         result_file.write('%f, %f\n' % (avg_gc_cnt, avg_waf))
 
@@ -236,6 +238,16 @@ if __name__ == "__main__":
         print('[Error] Invalid simulation type. Check config file')
         exit(1)
     
-    # plt.plot([i for i in range(1000)], ssd.victim_utilization)
-    # plt.hist(ssd.victim_utilization)
-    # plt.show()
+    if config.getboolean('Simulator', 'debug_victim_hist'):
+        # plt.plot([i for i in range(1000)], ssd.victim_utilization)
+        # plt.plot(ssd.victim_utilization)
+        plt.hist(ssd.victim_utilization, bins=50)
+        hist_path = 'res/' + config['SSD']['victim_selection_policy']
+        if config['Simulator']['simulation_type'] == 'Trace':
+            hist_path += '_' + trace_name
+        else:
+            hist_path += '_Synthetic'
+        if config['Simulator']['simulation_tag'] != '':
+            hist_path += '_' + config['Simulator']['simulation_tag']
+        hist_path += '_victim_histogram.png'
+        plt.savefig(hist_path)

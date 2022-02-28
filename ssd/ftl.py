@@ -34,6 +34,17 @@ class FTL:
 
         ### For debugging
         self.gc_cnt = 0
+
+        # victim utilization histogram
+        if config['debug_victim_hist'] in ['True', 'true', 1]:
+            self.victim_hist_flag = True
+            
+            # w/o memory overflow (0.001 scale)
+            # self.victim_utilization = [0 for _ in range(1000)]
+            self.victim_utilization = []
+        else:
+            self.victim_hist_flag = False
+        
         # self.debug_gc = int(config['debug_gc_utilization'])
         # self.sim_tag = config['simulation_tag']
         # if self.debug_gc != 0:
@@ -44,18 +55,14 @@ class FTL:
         # if self.debug_gc_stat != 0:
         #     with open(self.victim_selection_policy + '_gc_stat_' + self.sim_tag + '.csv', 'w') as f:
         #         f.write('valid_page_copy,waf,live_page_num\n')
-
-        # for histogram w/o memory overflow (0.001 scale)
-        self.victim_utilization = [0 for _ in range(1000)]
-
-        # self.victim_utilization = []
+        
         self.requested_write_pages = 0
         self.actual_write_pages = 0
 
     def clearMetric(self):
         self.gc_cnt = 0
-        self.victim_utilization = [0 for _ in range(1000)]
-        # self.victim_utilization = []
+        # self.victim_utilization = [0 for _ in range(1000)]
+        self.victim_utilization = []
         self.requested_write_pages = 0
         self.actual_write_pages = 0
     
@@ -118,11 +125,11 @@ class FTL:
             if victim.getLivePageNum() == self.page_per_block:
                 print('[WARN] All active blocks have utilizaion 1! Stop GC')
                 break
-
-            # TODO : tune resolution
-            u = int(victim.getUtilization() * 1000)
-            self.victim_utilization[u] += 1
-            # self.victim_utilization.append(victim.getUtilization())
+            
+            if self.victim_hist_flag:
+                # u = int(victim.getUtilization() * 1000)
+                # self.victim_utilization[u] += 1
+                self.victim_utilization.append(victim.getUtilization())
 
             ### 3. copy valid pages
             for offset in range(self.page_per_block):
