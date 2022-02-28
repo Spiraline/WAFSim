@@ -44,6 +44,12 @@ class FTL:
             self.victim_utilization = []
         else:
             self.victim_hist_flag = False
+
+        # Debug final utilization
+        if config['debug_final_u'] in ['True', 'true', 1]:
+            self.final_u_flag = True
+        else:
+            self.final_u_flag = False
         
         # self.debug_gc = int(config['debug_gc_utilization'])
         # self.sim_tag = config['simulation_tag']
@@ -101,16 +107,6 @@ class FTL:
         else:
             candidate_blk = sorted(self.__active_pbn,
                             key = lambda pbn : self.flash[pbn].getLivePageNum())
-
-        # Debug GC
-        # if self.debug_gc != 0:
-        #     with open(self.victim_selection_policy + '_gc_u_' + self.sim_tag + '.csv', 'a') as f:
-        #         u_list = []
-        #         for pbn in candidate_blk:
-        #             u = self.flash[pbn].getUtilization()
-        #             u_list.append(u)
-        #         f.write(str(u_list))
-        #         f.write('\n')
 
         while len(self.__free_pbn) < self.gc_end_threshold:
             if len(candidate_blk) == 0:

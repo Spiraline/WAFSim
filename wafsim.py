@@ -23,6 +23,7 @@ if __name__ == "__main__":
     
     config['SSD']['simulation_tag'] = config['Simulator']['simulation_tag']
     config['SSD']['debug_victim_hist'] = config['Simulator']['debug_victim_hist']
+    config['SSD']['debug_final_u'] = config['Simulator']['debug_final_u']
 
     lba_num = config.getint('SSD', 'block_num') * config.getint('SSD', 'page_per_block')
     page_size = config.getint('SSD', 'page_size')
@@ -251,3 +252,20 @@ if __name__ == "__main__":
             hist_path += '_' + config['Simulator']['simulation_tag']
         hist_path += '_victim_histogram.png'
         plt.savefig(hist_path)
+
+    if config.getboolean('Simulator', 'debug_final_u'):
+        final_u_path = 'res/' + config['SSD']['victim_selection_policy']
+        if config['Simulator']['simulation_type'] == 'Trace':
+            final_u_path += '_' + trace_name
+        else:
+            final_u_path += '_Synthetic'
+        if config['Simulator']['simulation_tag'] != '':
+            final_u_path += '_' + config['Simulator']['simulation_tag']
+        final_u_path += '_final_u_histogram.png'
+
+        u_list = []
+        for blk in ssd.flash:
+            u_list.append(blk.getUtilization())
+            
+        plt.hist(u_list, bins=50)
+        plt.savefig(final_u_path)
