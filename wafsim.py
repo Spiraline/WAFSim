@@ -21,9 +21,8 @@ if __name__ == "__main__":
     config['SSD']['page_per_block'] = str(parseIntPrefix(config['SSD']['page_per_block']))
     config['SSD']['page_size'] = str(parseIntPrefix(config['SSD']['page_size']))
     
-    config['SSD']['simulation_tag'] = config['Simulator']['simulation_tag']
     config['SSD']['debug_victim_hist'] = config['Simulator']['debug_victim_hist']
-    config['SSD']['debug_final_u'] = config['Simulator']['debug_final_u']
+    config['SSD']['debug_gc_stat'] = config['Simulator']['debug_gc_stat']
 
     lba_num = config.getint('SSD', 'block_num') * config.getint('SSD', 'page_per_block')
     page_size = config.getint('SSD', 'page_size')
@@ -269,3 +268,18 @@ if __name__ == "__main__":
             
         plt.hist(u_list, bins=50)
         plt.savefig(final_u_path)
+
+    if config.getboolean('Simulator', 'debug_gc_stat'):
+        gc_stat_path = 'res/' + config['SSD']['victim_selection_policy']
+        if config['Simulator']['simulation_type'] == 'Trace':
+            gc_stat_path += '_' + trace_name
+        else:
+            gc_stat_path += '_Synthetic'
+        if config['Simulator']['simulation_tag'] != '':
+            gc_stat_path += '_' + config['Simulator']['simulation_tag']
+        gc_stat_path += '_gc_stat.csv'
+
+        with open(gc_stat_path, 'w') as gc_stat_file:
+            gc_stat_file.write('valid_page_copy,waf,live_page_num\n')
+            for vp, waf, lpn in ssd.gc_stat_list:
+                gc_stat_file.write('%d,%f,%d\n' % (vp, waf, lpn))

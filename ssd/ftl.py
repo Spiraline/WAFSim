@@ -45,22 +45,12 @@ class FTL:
         else:
             self.victim_hist_flag = False
 
-        # Debug final utilization
-        if config['debug_final_u'] in ['True', 'true', 1]:
-            self.final_u_flag = True
+        # Debug GC statistics
+        if config['debug_gc_stat'] in ['True', 'true', 1]:
+            self.gc_stat_flag = True
+            self.gc_stat_list = []
         else:
-            self.final_u_flag = False
-        
-        # self.debug_gc = int(config['debug_gc_utilization'])
-        # self.sim_tag = config['simulation_tag']
-        # if self.debug_gc != 0:
-        #     with open(self.victim_selection_policy + '_gc_u_' + self.sim_tag + '.csv', 'w') as _:
-        #         pass
-
-        # self.debug_gc_stat = int(config['debug_gc_stat'])
-        # if self.debug_gc_stat != 0:
-        #     with open(self.victim_selection_policy + '_gc_stat_' + self.sim_tag + '.csv', 'w') as f:
-        #         f.write('valid_page_copy,waf,live_page_num\n')
+            self.gc_stat_flag = False
         
         self.requested_write_pages = 0
         self.actual_write_pages = 0
@@ -121,7 +111,7 @@ class FTL:
             if victim.getLivePageNum() == self.page_per_block:
                 print('[WARN] All active blocks have utilizaion 1! Stop GC')
                 break
-            
+
             if self.victim_hist_flag:
                 # u = int(victim.getUtilization() * 1000)
                 # self.victim_utilization[u] += 1
@@ -151,14 +141,12 @@ class FTL:
             for blk_idx in self.__active_pbn:
                 self.flash[blk_idx].setWeight(0)
 
-        # if self.debug_gc_stat != 0:
-        #     with open(self.victim_selection_policy + '_gc_stat_' + self.sim_tag + '.csv', 'a') as f:
-        #         live_page_num = 0
-        #         for pbn in self.__active_pbn:
-        #             live_page_num += self.flash[pbn].getLivePageNum()
-        #         waf = self.actual_write_pages / self.requested_write_pages
-        #         f.write('%d,%f,%s' % (valid_page_copy, waf, live_page_num))
-        #         f.write('\n')
+        if self.gc_stat_flag:
+            live_page_num = 0
+            for pbn in self.__active_pbn:
+                live_page_num += self.flash[pbn].getLivePageNum()
+            waf = self.actual_write_pages / self.requested_write_pages
+            self.gc_stat_list.append((valid_page_copy, waf, live_page_num))
 
         # print('GC end.. and now free block number is %d' % (len(self.__free_pbn)))
 
