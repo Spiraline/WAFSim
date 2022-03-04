@@ -21,7 +21,13 @@ class FTL:
 
         # gc threshold in page number scale
         self.gc_start_threshold = int(float(config['gc_start_threshold']) * self.block_num)
-        self.gc_end_threshold = int(float(config['gc_end_threshold']) * self.block_num)
+
+        # Reclaim constant number
+        if config['gc_mode'] == '0':
+            self.gc_reclaim_num = int(config['gc_reclaim_block'])
+        # Reclaim until reclaim threshold
+        else:
+            self.gc_reclaim_num = int(float(config['gc_reclaim_threshold']) * self.block_num) - self.gc_start_threshold
         
         ### For convinience
         # 0 is selected for current pbn
@@ -98,7 +104,8 @@ class FTL:
             candidate_blk = sorted(self.__active_pbn,
                             key = lambda pbn : self.flash[pbn].getLivePageNum())
 
-        while len(self.__free_pbn) < self.gc_end_threshold:
+        reclaim_num = 0
+        while reclaim_num < self.gc_reclaim_num:
             if len(candidate_blk) == 0:
                 print('[WARN] No blocks to GC! Stop GC')
                 break
@@ -135,6 +142,8 @@ class FTL:
             ### 5. update free block idx
             self.__active_pbn.remove(victim_idx)
             self.__free_pbn.append(victim_idx)
+
+            reclaim_num += 1
 
         ### (for LC-CB) clear weight to 0
         if self.victim_selection_policy == 'LC-CB':

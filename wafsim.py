@@ -23,6 +23,7 @@ if __name__ == "__main__":
     config['SSD']['block_num'] = str(parseIntPrefix(config['SSD']['block_num']))
     config['SSD']['page_per_block'] = str(parseIntPrefix(config['SSD']['page_per_block']))
     config['SSD']['page_size'] = str(parseIntPrefix(config['SSD']['page_size']))
+    config['SSD']['gc_reclaim_block'] = str(parseIntPrefix(config['SSD']['gc_reclaim_block']))
     
     config['SSD']['debug_victim_hist'] = config['Simulator']['debug_victim_hist']
     config['SSD']['debug_gc_stat'] = config['Simulator']['debug_gc_stat']
