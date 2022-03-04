@@ -6,8 +6,11 @@ import matplotlib.pyplot as plt
 from random import randint, seed
 from os.path import exists, isfile, join, basename
 from os import makedirs, listdir
+from datetime import datetime
 
 if __name__ == "__main__":
+    start_ts = datetime.now()
+
     makedirs('res', exist_ok=True)
     if not exists('config/config'):
         print('[Error] No configuration file. Please make config/config file')
@@ -143,10 +146,10 @@ if __name__ == "__main__":
             print('[Info] Req # : %d' % max_req)
             print('[Info] GC : %d, WAF : %f' % (ssd.gc_cnt, waf))
 
-            result_path = 'res/' + config['SSD']['victim_selection_policy'] + '_trace'
+            result_path = 'res/' + config['SSD']['victim_selection_policy'] + '-trace-' + trace_name
             if config['Simulator']['simulation_tag'] != '':
-                result_path += '_' + config['Simulator']['simulation_tag']
-            result_path += '_result.csv'
+                result_path += '-' + config['Simulator']['simulation_tag']
+            result_path += '-result.csv'
             with open(result_path, 'w') as result_file:
                 result_file.write('%s, %d, %f\n' % (trace_name, ssd.gc_cnt, waf))
     ### 2. Start synthetic simulation
@@ -155,10 +158,10 @@ if __name__ == "__main__":
         total_gc_cnt = 0
         total_waf = 0
 
-        result_path = 'res/' + config['SSD']['victim_selection_policy'] + '_synthetic'
+        result_path = 'res/' + config['SSD']['victim_selection_policy'] + '-synthetic'
         if config['Simulator']['simulation_tag'] != '':
-            result_path += '_' + config['Simulator']['simulation_tag']
-        result_path += '_result.csv'
+            result_path += '-' + config['Simulator']['simulation_tag']
+        result_path += '-result.csv'
         result_file = open(result_path, 'w')
 
         config['Synthetic']['lba_num'] = str(lba_num * config.getint('Synthetic', 'working_set_percentage') // 100)
@@ -253,23 +256,23 @@ if __name__ == "__main__":
         plt.hist(ssd.victim_utilization, bins=50)
         hist_path = 'res/' + config['SSD']['victim_selection_policy']
         if config['Simulator']['simulation_type'] == 'Trace':
-            hist_path += '_' + trace_name
+            hist_path += '-' + trace_name
         else:
-            hist_path += '_Synthetic'
+            hist_path += '-Synthetic'
         if config['Simulator']['simulation_tag'] != '':
-            hist_path += '_' + config['Simulator']['simulation_tag']
-        hist_path += '_victim_histogram.png'
+            hist_path += '-' + config['Simulator']['simulation_tag']
+        hist_path += '-victim_histogram.png'
         plt.savefig(hist_path)
 
     if config.getboolean('Simulator', 'debug_final_u'):
         final_u_path = 'res/' + config['SSD']['victim_selection_policy']
         if config['Simulator']['simulation_type'] == 'Trace':
-            final_u_path += '_' + trace_name
+            final_u_path += '-' + trace_name
         else:
-            final_u_path += '_Synthetic'
+            final_u_path += '-Synthetic'
         if config['Simulator']['simulation_tag'] != '':
-            final_u_path += '_' + config['Simulator']['simulation_tag']
-        final_u_path += '_final_u_histogram.png'
+            final_u_path += '-' + config['Simulator']['simulation_tag']
+        final_u_path += '-final_u_histogram.png'
 
         u_list = []
         for blk in ssd.flash:
@@ -281,14 +284,17 @@ if __name__ == "__main__":
     if config.getboolean('Simulator', 'debug_gc_stat'):
         gc_stat_path = 'res/' + config['SSD']['victim_selection_policy']
         if config['Simulator']['simulation_type'] == 'Trace':
-            gc_stat_path += '_' + trace_name
+            gc_stat_path += '-' + trace_name
         else:
-            gc_stat_path += '_Synthetic'
+            gc_stat_path += '-Synthetic'
         if config['Simulator']['simulation_tag'] != '':
-            gc_stat_path += '_' + config['Simulator']['simulation_tag']
-        gc_stat_path += '_gc_stat.csv'
+            gc_stat_path += '-' + config['Simulator']['simulation_tag']
+        gc_stat_path += '-gc_stat.csv'
 
         with open(gc_stat_path, 'w') as gc_stat_file:
             gc_stat_file.write('valid_page_copy,waf,live_page_num\n')
             for vp, waf, lpn in ssd.gc_stat_list:
                 gc_stat_file.write('%d,%f,%d\n' % (vp, waf, lpn))
+    
+    end_ts = datetime.now()
+    print('[Info] Simulation time : %s' % str(end_ts - start_ts))
