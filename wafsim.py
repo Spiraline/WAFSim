@@ -28,8 +28,9 @@ if __name__ == "__main__":
     config['SSD']['debug_victim_hist'] = config['Simulator']['debug_victim_hist']
     config['SSD']['debug_gc_stat'] = config['Simulator']['debug_gc_stat']
 
-    lba_num = config.getint('SSD', 'block_num') * config.getint('SSD', 'page_per_block')
+    page_per_block = config.getint('SSD', 'page_per_block')
     page_size = config.getint('SSD', 'page_size')
+    lba_num = config.getint('SSD', 'block_num') * page_per_block
     ssd_capacity = page_size * lba_num
 
     if config['Simulator']['seed'] != '':
@@ -65,11 +66,27 @@ if __name__ == "__main__":
             req_num = int(trace_file.readline())
             trace_max_addr = int(trace_file.readline())
 
+            # Dynamic capacity
+            if config['Trace']['dynamic_capacity'] in ['True', 'true', 1]:
+                dynamic_block_num = 1
+                while dynamic_block_num * page_per_block * page_size < trace_max_addr:
+                    dynamic_block_num *= 2
+                lba_num = dynamic_block_num * page_per_block
+                ssd_capacity = lba_num * page_size
+                config['SSD']['block_num'] = str(dynamic_block_num)
+
+                if warmup_type != '':
+                    warmup_fill_tick = lba_num * config.getint('Simulator','fill_percentage') // 100
+                    warmup_invalid_tick = lba_num * config.getint('Simulator','invalid_percentage') // 100
+
             if ssd_capacity < trace_max_addr:
                 print('[Error] SSD capacity is smaller than trace')
                 print('SSD capacity:\t\t%d (%s) bytes' % (ssd_capacity, encodePrefix(ssd_capacity)))
                 print('max addr in trace:\t%d (%s) bytes' % (trace_max_addr, encodePrefix(trace_max_addr)))
                 exit(1)
+            else:
+                print('SSD capacity:\t\t%d (%s) bytes' % (ssd_capacity, encodePrefix(ssd_capacity)))
+                print('max addr in trace:\t%d (%s) bytes' % (trace_max_addr, encodePrefix(trace_max_addr)))
 
             ssd = FTL(config['SSD'])
 
