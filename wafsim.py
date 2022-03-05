@@ -53,7 +53,7 @@ if __name__ == "__main__":
         
         trace_list = []
         if isfile(trace_path):
-            trace_list.append(trace_list)
+            trace_list.append(trace_path)
         else:
             for name in listdir(trace_path):
                 if name.split('.')[-1] == 'trace':
@@ -74,6 +74,7 @@ if __name__ == "__main__":
                     dynamic_block_num *= 2
                 lba_num = dynamic_block_num * page_per_block
                 ssd_capacity = lba_num * page_size
+                block_num = dynamic_block_num
                 config['SSD']['block_num'] = str(dynamic_block_num)
 
                 if warmup_type != '':
@@ -123,15 +124,32 @@ if __name__ == "__main__":
                 # Warm-up with trace
                 elif warmup_type == '2':
                     fill_block_num = block_num * config.getint('Simulator','fill_percentage') // 100
+                    trace_file = open(trace_file_path, 'r')
+                    trace_file.readline()
+                    trace_file.readline()
                     while ssd.getActiveBlockNum() < fill_block_num:
                         curr_fill_progress = (int)(ssd.getActiveBlockNum() / fill_block_num * 10)
                         if fill_progress != curr_fill_progress:
                             fill_progress = curr_fill_progress
                             print('[Info] Warm-up (fill) %d %% Complete' % (fill_progress * 10))
-                    pass
+
+                        req_str = trace_file.readline()
+                        if req_str == '':
+                            trace_file.close()
+                            trace_file = open(trace_file_path, 'r')
+                            trace_file.readline()
+                            trace_file.readline()
+                            req_str = trace_file.readline()
+                        
+                        op, lba_list = parseReq(req_str, page_size)
+                        for lba in lba_list:
+                            ssd.execute(op, lba, tick)
+                            tick += 1
                 else:
                     print('[Error] Invalid warm-up type')
                     exit(1)
+                
+                trace_file.close()
                 
                 # Random invalid
                 if warmup_type == '0' or warmup_type == '1':
