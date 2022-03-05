@@ -30,7 +30,8 @@ if __name__ == "__main__":
 
     page_per_block = config.getint('SSD', 'page_per_block')
     page_size = config.getint('SSD', 'page_size')
-    lba_num = config.getint('SSD', 'block_num') * page_per_block
+    block_num = config.getint('SSD', 'block_num')
+    lba_num = block_num * page_per_block
     ssd_capacity = page_size * lba_num
 
     if config['Simulator']['seed'] != '':
@@ -59,12 +60,12 @@ if __name__ == "__main__":
                     trace_list.append(join(trace_path, name))
 
         for (idx, trace_file_path) in enumerate(trace_list):
-            trace_file = open(trace_file_path, 'r')
             trace_name = basename(trace_file_path).split('.')[0]
 
             ### 1-1. Check SSD size is larger than trace's max address
-            req_num = int(trace_file.readline())
-            trace_max_addr = int(trace_file.readline())
+            with open(trace_file_path, 'r') as trace_file:
+                req_num = int(trace_file.readline())
+                trace_max_addr = int(trace_file.readline())
 
             # Dynamic capacity
             if config['Trace']['dynamic_capacity'] in ['True', 'true', 1]:
@@ -119,25 +120,39 @@ if __name__ == "__main__":
                         if ssd.mapping_table[lba] == -1:
                             ssd.execute('write', lba, tick)
                             tick += 1
+                # Warm-up with trace
+                elif warmup_type == '2':
+                    fill_block_num = block_num * config.getint('Simulator','fill_percentage') // 100
+                    while ssd.getActiveBlockNum() < fill_block_num:
+                        curr_fill_progress = (int)(ssd.getActiveBlockNum() / fill_block_num * 10)
+                        if fill_progress != curr_fill_progress:
+                            fill_progress = curr_fill_progress
+                            print('[Info] Warm-up (fill) %d %% Complete' % (fill_progress * 10))
+                    pass
                 else:
                     print('[Error] Invalid warm-up type')
                     exit(1)
                 
-                invalid_progress = 0
                 # Random invalid
-                while tick < warmup_fill_tick + warmup_invalid_tick:
-                    curr_invalid_progress = (int)((tick - warmup_fill_tick) / warmup_invalid_tick * 10)
-                    if invalid_progress != curr_invalid_progress:
-                        invalid_progress = curr_invalid_progress
-                        print('[Info] Warm-up (invalidate) %d %% Complete' % (invalid_progress * 10))
-                    lba = randint(0, lba_num-1)
+                if warmup_type == '0' or warmup_type == '1':
+                    invalid_progress = 0
+                    while tick < warmup_fill_tick + warmup_invalid_tick:
+                        curr_invalid_progress = (int)((tick - warmup_fill_tick) / warmup_invalid_tick * 10)
+                        if invalid_progress != curr_invalid_progress:
+                            invalid_progress = curr_invalid_progress
+                            print('[Info] Warm-up (invalidate) %d %% Complete' % (invalid_progress * 10))
+                        lba = randint(0, lba_num-1)
 
-                    # Invalid only for written lba
-                    if ssd.mapping_table[lba] != -1:
-                        ssd.execute('erase', lba, tick)
-                        tick += 1
+                        # Invalid only for written lba
+                        if ssd.mapping_table[lba] != -1:
+                            ssd.execute('erase', lba, tick)
+                            tick += 1
                 
                 ssd.clearMetric()
+
+            trace_file = open(trace_file_path, 'r')
+            trace_file.readline()
+            trace_file.readline()
 
             ### 1-3. Simulation
             max_req = req_num * config.getint('Trace', 'execute_percentage') // 100
@@ -175,6 +190,11 @@ if __name__ == "__main__":
         ### Initialize statistics
         total_gc_cnt = 0
         total_waf = 0
+
+        if warmup_type == '2':
+            print('[Error] Invalid warmup_type, change to 1')
+            warmup_type = '1'
+            exit(1)
 
         result_path = 'res/' + config['SSD']['victim_selection_policy'] + '-synthetic'
         if config['Simulator']['simulation_tag'] != '':

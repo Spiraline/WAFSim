@@ -60,6 +60,9 @@ class FTL:
         
         self.requested_write_pages = 0
         self.actual_write_pages = 0
+    
+    def getActiveBlockNum(self):
+        return len(self.__active_pbn)
 
     def clearMetric(self):
         self.gc_cnt = 0
