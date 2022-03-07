@@ -1,5 +1,6 @@
 import os
 import argparse
+import tqdm
 
 ### Output format
 # 1st row : request #
