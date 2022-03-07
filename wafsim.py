@@ -132,29 +132,55 @@ if __name__ == "__main__":
                     trace_file = open(trace_file_path, 'r')
                     trace_file.readline()
                     trace_file.readline()
+
+                    ## Maybe too much space overhead
+                    ## Disable if you need access time instead of invalid time
+                    write_req_list = []
+                    for i in range(req_num):
+                        req_str = trace_file.readline()
+                        op, lba_list = parseReq(req_str, page_size)
+                        if op == 'write':
+                            write_req_list.append(lba_list)
+                    trace_file.close()
+
+                    req_idx = 0
                     while ssd.getActiveBlockNum() < fill_block_num:
                         curr_fill_progress = (int)(ssd.getActiveBlockNum() / fill_block_num * 10)
                         if fill_progress != curr_fill_progress:
                             fill_progress = curr_fill_progress
                             print('[Info] Warm-up (fill) %d %% Complete' % (fill_progress * 10))
-
-                        req_str = trace_file.readline()
-                        if req_str == '':
-                            trace_file.close()
-                            trace_file = open(trace_file_path, 'r')
-                            trace_file.readline()
-                            trace_file.readline()
-                            req_str = trace_file.readline()
-                        
-                        op, lba_list = parseReq(req_str, page_size)
-                        for lba in lba_list:
-                            ssd.execute(op, lba, tick)
+                        if req_idx == len(write_req_list):
+                            req_idx = 0
+                        for lba in write_req_list[req_idx]:
+                            ssd.execute('write', lba, tick)
                             tick += 1
+                        req_idx += 1
+
+                    ## No space overhead but time-consuming
+                    # while ssd.getActiveBlockNum() < fill_block_num:
+                    #     curr_fill_progress = (int)(ssd.getActiveBlockNum() / fill_block_num * 10)
+                    #     if fill_progress != curr_fill_progress:
+                    #         fill_progress = curr_fill_progress
+                    #         print('[Info] Warm-up (fill) %d %% Complete' % (fill_progress * 10))
+
+                    #     req_str = trace_file.readline()
+                    #     if req_str == '':
+                    #         trace_file.close()
+                    #         trace_file = open(trace_file_path, 'r')
+                    #         trace_file.readline()
+                    #         trace_file.readline()
+                    #         req_str = trace_file.readline()
+                        
+                    #     op, lba_list = parseReq(req_str, page_size)
+                    #     for lba in lba_list:
+                    #         ssd.execute(op, lba, tick)
+                    #         tick += 1
+                    #         fill_progress.n = ssd.getActiveBlockNum()
+                    #         fill_progress.refresh()
+                    # trace_file.close()
                 else:
                     print('[Error] Invalid warm-up type')
                     exit(1)
-                
-                trace_file.close()
                 
                 # Random invalid
                 if warmup_type == '0' or warmup_type == '1':

@@ -24,15 +24,23 @@ if __name__ == "__main__":
     page_size = parseIntPrefix(args.page_size)
 
     LBA_list = []
+    read_num = 0
+    write_num = 0
     
     with open(args.input, 'r') as trace_file:
         req_num = int(trace_file.readline())
         trace_max_addr = int(trace_file.readline())
         for req in tqdm.tqdm(range(req_num)):
-            _, LBAs = parseReq(trace_file.readline(), page_size)
-            for LBA in LBAs:
-                LBA_list.append(LBA)
+            op, LBAs = parseReq(trace_file.readline(), page_size)
+            if op == 'write':
+                write_num += 1
+                for LBA in LBAs:
+                    LBA_list.append(LBA)
+            else:
+                read_num += 1
 
-    plt.hist(LBA_list)
+    print(read_num, write_num)
+
+    plt.hist(LBA_list, bins=500)
     plt.show()
         
