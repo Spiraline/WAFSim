@@ -99,7 +99,7 @@ class FTL:
             candidate_blk = sorted(self.__active_pbn,
                             key = lambda pbn : -self.flash[pbn].getCostAgeTime(ts))
         # LC-CB
-        elif self.victim_selection_policy == 'LC-CB':
+        elif self.victim_selection_policy == 'LCCB':
             candidate_blk = sorted(self.__active_pbn,
                             key = lambda pbn : self.flash[pbn].getLCCBMetric(self.U))
         # Default : Greedy
@@ -149,7 +149,7 @@ class FTL:
             reclaim_num += 1
 
         ### (for LC-CB) clear weight to 0
-        if self.victim_selection_policy == 'LC-CB':
+        if self.victim_selection_policy == 'LCCB':
             for blk_idx in self.__active_pbn:
                 self.flash[blk_idx].setWeight(0)
 
@@ -187,7 +187,7 @@ class FTL:
                 prev_pbn = ppn // self.page_per_block
                 prev_off = ppn % self.page_per_block
                 addWeight = 0
-                if self.victim_selection_policy == 'LC-CB':
+                if self.victim_selection_policy == 'LCCB':
                     addWeight = (self.flash[prev_pbn].getLivePageNum() - 1) >> self.H
                 self.flash[prev_pbn].invalidate(prev_off, ts, addWeight)
 
