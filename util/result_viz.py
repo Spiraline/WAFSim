@@ -1,14 +1,14 @@
 from os import listdir
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
 
-WAF_dict = {'Greedy': [], 'CB': [], 'LC': []}
-GC_dict = {'Greedy': [], 'CB': [], 'LC': []}
+WAF_dict = {'Greedy': [], 'CB': [], 'LCCB': []}
+GC_dict = {'Greedy': [], 'CB': [], 'LCCB': []}
 trace_arr = []
 
 for file in listdir('res'):
     policy = file.split('-')[0]
-    trace = file.split('-')[-2]
+    trace = file.split('-')[2]
+    tag = file.split('-')[3]
     if trace not in trace_arr:
         trace_arr.append(trace)
     with open('res/' + file, 'r') as f:
@@ -26,8 +26,8 @@ for idx, trace in enumerate(trace_arr):
         WAF_dict['Greedy'][idx],
         GC_dict['CB'][idx],
         WAF_dict['CB'][idx],
-        GC_dict['LC'][idx],
-        WAF_dict['LC'][idx]))
+        GC_dict['LCCB'][idx],
+        WAF_dict['LCCB'][idx]))
 
 # Visualize
 fig, ax = plt.subplots(figsize=(28, 5))
@@ -37,7 +37,7 @@ axis_list = [i*1.5 for i in range(0, len(trace_arr))]
 
 plt.bar([i-0.3 for i in axis_list], WAF_dict['Greedy'], label='Greedy', align='center', width=0.3, color='white', edgecolor='black')
 plt.bar([i for i in axis_list], WAF_dict['CB'], label='CB', align='center', width=0.3, color='gray', edgecolor='black')
-plt.bar([i+0.3 for i in axis_list], WAF_dict['LC'], label='LC-CB', align='center', width=0.3, color='white', edgecolor='black', hatch='///')
+plt.bar([i+0.3 for i in axis_list], WAF_dict['LCCB'], label='LC-CB', align='center', width=0.3, color='white', edgecolor='black', hatch='///')
 plt.legend()
 
 ax.set_xlabel('MSRC Trace')
