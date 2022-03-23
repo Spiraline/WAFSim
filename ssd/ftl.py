@@ -151,7 +151,10 @@ class FTL:
         ### (for LC-CB) clear weight to 0
         if self.victim_selection_policy == 'LCCB':
             for blk_idx in self.__active_pbn:
-                self.flash[blk_idx].setWeight(0)
+                if self.D == -1:
+                    self.flash[blk_idx].setWeight(0)
+                else:
+                    self.flash[blk_idx].setWeight(self.flash[blk_idx].weight >> self.D)
 
         if self.gc_stat_flag:
             live_page_num = 0
