@@ -1,6 +1,6 @@
 import argparse
 import configparser
-from util.workload_generator import WorkLoad
+from util.workload_generator import WorkLoad, getNextTimeStamp
 from util.parse_helper import *
 from ssd.ftl import FTL
 import matplotlib.pyplot as plt
@@ -77,6 +77,7 @@ if __name__ == "__main__":
             with open(trace_file_path, 'r') as trace_file:
                 req_num = int(trace_file.readline())
                 trace_max_addr = int(trace_file.readline())
+                duration_distribution = list(map(int, trace_file.readline().split()))
 
             # Dynamic capacity
             if config['Trace']['dynamic_capacity'] in ['True', 'true', 1]:
@@ -103,22 +104,28 @@ if __name__ == "__main__":
 
             ssd = FTL(config['SSD'])
 
-            tick = 0
+            ts = 0
 
             print("[Info] (%d / %d) Simulation with trace %s starts" % (idx+1, len(trace_list), trace_name))
 
             ### 1-2. Warm-up
             if warmup_type != '':
+                tick = 0
+                for idx in range(1, len(duration_distribution)):
+                    duration_distribution[idx] += duration_distribution[idx-1]
+
                 fill_progress = 0
                 print("[Info] Warm-up starts")
                 if warmup_type == '0':
                     while tick < warmup_fill_tick:
+                        randint(req_num)
                         curr_fill_progress = (int)(tick / warmup_fill_tick * 10)
                         if fill_progress != curr_fill_progress:
                             fill_progress = curr_fill_progress
                             print('[Info] Warm-up (fill) %d %% Complete' % (fill_progress * 10))
-                        ssd.execute('write', tick, tick)
+                        ssd.execute('write', tick, ts)
                         tick += 1
+                        ts += getNextTimeStamp(duration_distribution)
                 # Random fill
                 elif warmup_type == '1':
                     while tick < warmup_fill_tick:
@@ -130,12 +137,14 @@ if __name__ == "__main__":
 
                         # Fill only for unwritten lba
                         if ssd.mapping_table[lba] == -1:
-                            ssd.execute('write', lba, tick)
+                            ssd.execute('write', lba, ts)
                             tick += 1
+                            ts += getNextTimeStamp(duration_distribution)
                 # Warm-up with trace
                 elif warmup_type == '2':
                     fill_block_num = block_num * config.getint('Simulator','fill_percentage') // 100
                     trace_file = open(trace_file_path, 'r')
+                    trace_file.readline()
                     trace_file.readline()
                     trace_file.readline()
 
@@ -144,7 +153,7 @@ if __name__ == "__main__":
                     write_req_list = []
                     for i in range(req_num):
                         req_str = trace_file.readline()
-                        op, lba_list = parseReq(req_str, page_size)
+                        op, lba_list, _ = parseReq(req_str, page_size)
                         if op == 'write':
                             write_req_list.append(lba_list)
                     trace_file.close()
@@ -158,32 +167,9 @@ if __name__ == "__main__":
                         if req_idx == len(write_req_list):
                             req_idx = 0
                         for lba in write_req_list[req_idx]:
-                            ssd.execute('write', lba, tick)
-                            tick += 1
+                            ssd.execute('write', lba, ts)
+                            ts += getNextTimeStamp(duration_distribution)
                         req_idx += 1
-
-                    ## No space overhead but time-consuming
-                    # while ssd.getActiveBlockNum() < fill_block_num:
-                    #     curr_fill_progress = (int)(ssd.getActiveBlockNum() / fill_block_num * 10)
-                    #     if fill_progress != curr_fill_progress:
-                    #         fill_progress = curr_fill_progress
-                    #         print('[Info] Warm-up (fill) %d %% Complete' % (fill_progress * 10))
-
-                    #     req_str = trace_file.readline()
-                    #     if req_str == '':
-                    #         trace_file.close()
-                    #         trace_file = open(trace_file_path, 'r')
-                    #         trace_file.readline()
-                    #         trace_file.readline()
-                    #         req_str = trace_file.readline()
-                        
-                    #     op, lba_list = parseReq(req_str, page_size)
-                    #     for lba in lba_list:
-                    #         ssd.execute(op, lba, tick)
-                    #         tick += 1
-                    #         fill_progress.n = ssd.getActiveBlockNum()
-                    #         fill_progress.refresh()
-                    # trace_file.close()
                 else:
                     print('[Error] Invalid warm-up type')
                     exit(1)
@@ -200,12 +186,14 @@ if __name__ == "__main__":
 
                         # Invalid only for written lba
                         if ssd.mapping_table[lba] != -1:
-                            ssd.execute('erase', lba, tick)
+                            ssd.execute('erase', lba, ts)
                             tick += 1
+                            ts += getNextTimeStamp(duration_distribution)
                 
                 ssd.clearMetric()
 
             trace_file = open(trace_file_path, 'r')
+            trace_file.readline()
             trace_file.readline()
             trace_file.readline()
 
@@ -213,15 +201,17 @@ if __name__ == "__main__":
             max_req = req_num * config.getint('Trace', 'execute_percentage') // 100
 
             sim_progress = 0
+            prev_req_ts = 0
             for req in range(max_req):
                 curr_sim_progress = (int)(req / max_req * 20)
                 if sim_progress != curr_sim_progress:
                     sim_progress = curr_sim_progress
                     print('[Info] Simulation %d %% Complete' % (sim_progress * 5))
-                op, lba_list = parseReq(trace_file.readline(), page_size)
+                op, lba_list, req_ts = parseReq(trace_file.readline(), page_size)
+                ts += (req_ts - prev_req_ts)
+                prev_req_ts = req_ts
                 for lba in lba_list:
-                    ssd.execute(op, lba, tick)
-                    tick += 1
+                    ssd.execute(op, lba, ts)
 
             trace_file.close()
 

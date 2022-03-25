@@ -47,4 +47,4 @@ def parseReq(req_str, page_size = parseIntPrefix('8K')):
     else:
         op = 'read'
 
-    return op, lba_list
+    return op, lba_list, ts

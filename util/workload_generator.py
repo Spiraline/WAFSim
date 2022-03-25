@@ -50,3 +50,15 @@ class WorkLoad:
             lba = self.__getHotColdLBA()
         
         return op, lba
+
+def getNextTimeStamp(accumulated_dist):
+    randnum = randint(1, accumulated_dist[-1])
+    degree = 1
+    
+    for acc in accumulated_dist:
+        if randnum <= acc:
+            break
+        else:
+            degree *= 10
+    
+    return int(random() * degree)
