@@ -16,6 +16,7 @@ if __name__ == "__main__":
     parser.add_argument('--config', '-c', default='config/config', type=str)
     parser.add_argument('--util', default='3')
     parser.add_argument('--hotness', default='4')
+    parser.add_argument('--decay', default='1')
     args = parser.parse_args()
 
     makedirs('res', exist_ok=True)
@@ -26,9 +27,10 @@ if __name__ == "__main__":
     config = configparser.ConfigParser()
     config.read(args.config)
 
-    config['Simulator']['simulation_tag'] = str(args.util) + '_' + str(args.hotness)
+    config['Simulator']['simulation_tag'] = str(args.util) + '_' + str(args.hotness) + '_' + str(args.decay)
     config['SSD']['utilization_factor'] = args.util
     config['SSD']['hotness_factor'] = args.hotness
+    config['SSD']['decay_factor'] = args.decay
 
     ### Parse Configuration
     config['SSD']['block_num'] = str(parseIntPrefix(config['SSD']['block_num']))
