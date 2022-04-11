@@ -70,7 +70,7 @@ class Block:
         self.valid_bit[offset] = False
         self.weight += addWeight
 
-    def read(self, offset, ts):
+    def read(self, offset, lba, ts):
         if offset >= len(self.lba):
             return -1
 

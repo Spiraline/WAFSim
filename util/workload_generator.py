@@ -2,14 +2,14 @@ from random import randint, random
 
 class WorkLoad:
     def __init__(self, config):
-        self.lba_size = int(config['lba_size'])
+        self.lba_num = int(config['lba_num'])
         self.workload_type = int(config['workload_type'])
         self.read_ratio = float(config['read_ratio'])
         self.locality = float(config['locality'])
         self.__last_lba = -1
 
     def __getSeqLBA(self):
-        if self.__last_lba == self.lba_size - 1:
+        if self.__last_lba == self.lba_num - 1:
             self.__last_lba = 0
         else:
             self.__last_lba += 1
@@ -17,17 +17,17 @@ class WorkLoad:
         return self.__last_lba
 
     def __getRandomLBA(self):
-        return randint(0, self.lba_size)
+        return randint(0, self.lba_num)
 
     # TODO : should read only writed lba
 
     def __getHotColdLBA(self):
-        hot_idx = int(self.lba_size * self.locality)
+        hot_idx = int(self.lba_num * self.locality)
         if random() > self.locality:
             # hot data
             return randint(0, hot_idx)
         else:
-            return randint(hot_idx, self.lba_size)
+            return randint(hot_idx, self.lba_num)
 
     def getNextOperation(self):
         op = -1
@@ -50,3 +50,15 @@ class WorkLoad:
             lba = self.__getHotColdLBA()
         
         return op, lba
+
+def getNextTimeStamp(accumulated_dist):
+    randnum = randint(1, accumulated_dist[-1])
+    degree = 1
+    
+    for acc in accumulated_dist:
+        if randnum <= acc:
+            break
+        else:
+            degree *= 10
+    
+    return int(random() * degree)
