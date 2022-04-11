@@ -12,7 +12,7 @@ from datetime import datetime
 if __name__ == "__main__":
     start_ts = datetime.now()
 
-    parser = argparse.ArgumentParser(description="WAF Simulator")
+    parser = argparse.ArgumentParser(description="WA Simulator")
     parser.add_argument('--config', '-c', default='config/config', type=str)
     args = parser.parse_args()
 
