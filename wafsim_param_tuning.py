@@ -16,7 +16,7 @@ if __name__ == "__main__":
     parser.add_argument('--config', '-c', default='config/config', type=str)
     parser.add_argument('--util', default='3')
     parser.add_argument('--hotness', default='4')
-    parser.add_argument('--decay', default='1')
+    parser.add_argument('--decay', default='-1')
     args = parser.parse_args()
 
     makedirs('res', exist_ok=True)
